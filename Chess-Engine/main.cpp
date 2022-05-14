@@ -67,7 +67,7 @@ int main(void)
 		CloseHandle(handles[i]);
 	}
 
-	string s = "777";
+	string s = "7777777777777777777777777777777777777777";
 
 	return 0;
 }

@@ -1,2 +1,6 @@
 ﻿  main.cpp
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(56): warning C4018: '<': signed/unsigned mismatch
+  window.cpp
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(56): warning C4018: '<': signed/unsigned mismatch
+  Generating Code...
   Chess-Engine.vcxproj -> C:\Users\Andy Wang\source\repos\Chess-Engine\Debug\Chess-Engine.exe

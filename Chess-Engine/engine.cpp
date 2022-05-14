@@ -44,6 +44,12 @@ public:
 			}
 
 			WaitForSingleObject(p->mutex, INFINITE);
+			cout << "processing..." << endl;
+			ReleaseMutex(p->mutex);
+
+			Sleep(500);
+
+			WaitForSingleObject(p->mutex, INFINITE);
 			cout << "engine: received " << move << endl;
 			p->move = ""; // indicate that move was received
 			ReleaseMutex(p->mutex);
