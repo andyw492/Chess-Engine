@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <iostream>
 
-#include "parameters.cpp"
-#include "window.cpp"
-#include "engine.cpp"
+#include "parameters.h"
+#include "window.h"
+#include "engine.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -55,6 +55,8 @@ int main(void)
 	// create a quit event; manual reset, initial state = not signaled
 	p.eventQuit = CreateEvent(NULL, true, false, NULL);
 
+	p.initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+
 	// structure p is the shared space between the threads
 	handles[0] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)engineThread, &p, 0, NULL);		// start threadA (instance #1) 
 	handles[1] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)windowThread, &p, 0, NULL);		// start threadA (instance #2)
@@ -67,7 +69,7 @@ int main(void)
 		CloseHandle(handles[i]);
 	}
 
-	string s = "7777777777777777777777777777777777777777";
+	string s = "777777777777777777777777777777777777777777777777777777777777777";
 
 	return 0;
 }

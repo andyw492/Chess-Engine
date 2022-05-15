@@ -1,5 +1,5 @@
-#ifndef parameters_cpp
-#define parameters_cpp
+#ifndef parameters_h
+#define parameters_h
 
 #define NOMINMAX
 #include <windows.h>
@@ -18,8 +18,12 @@ public:
 	HANDLE	finished;
 	HANDLE	eventQuit;
 
+	string initialFen = "";
+
 	string move = "";
 	map<string, vector<string>> legalMoves;
+
+	bool windowClosed = false;
 };
 
 #endif

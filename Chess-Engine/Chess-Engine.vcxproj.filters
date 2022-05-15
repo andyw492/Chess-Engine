@@ -24,8 +24,22 @@
     <ClCompile Include="window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="parameters.cpp">
+    <ClCompile Include="helper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="engine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="parameters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
