@@ -326,6 +326,17 @@ void Window::display(LPVOID pParam)
 				//		if yes, that is a capture, implement later
 				//		if no, then move the piece to that square and send that move to the engine
 
+				map<string, vector<string>> legalMoves = helper::getLegalMoves(initialFen, true);
+				for (auto i : legalMoves)
+				{
+					cout << i.first << ": ";
+					for (int j = 0; j < i.second.size(); j++)
+					{
+						cout << i.second[j] << " ";
+					}
+					cout << endl;
+				}
+
 				((sf::Sprite*)objects["N2"])->setPosition(boardSquares[5][5]);
 
 				window.clear(sf::Color::White);
@@ -334,14 +345,14 @@ void Window::display(LPVOID pParam)
 
 				for (auto i : objects)
 				{
-					if (i.first == "board_white")
+					if (i.first == "board_white" || i.first == "selectionRectangle")
 					{
 						continue;
 					}
 					window.draw(*i.second);
 				}
 
-				if (squarePosX != -1)
+				if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
 				{
 					window.draw(*objects["selectionRectangle"]);
 				}
