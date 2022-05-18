@@ -1,13 +1,16 @@
 #include "window.h"
 
-Window::Window()
+Window::Window(bool windowPrint)
 {
-	// initialize board square positions
-	for (int i = 0; i < 8; i++)
+	dpr = windowPrint;
+
+	// initialize board square and piece positions
+	for (int y = 0; y < 8; y++)
 	{
-		for (int j = 0; j < 8; j++)
+		for (int x = 0; x < 8; x++)
 		{
-			boardSquares[i][j] = sf::Vector2f(j * 70 + 34.5f, i * 70 + 36.5f);
+			squarePos[y][x] = sf::Vector2f(x * 70 + 30.f, y * 70 + 30.f);
+			piecePos[y][x] = sf::Vector2f(x * 70 + 34.5f, y * 70 + 36.5f);
 		}
 	}
 }
@@ -31,6 +34,52 @@ void Window::dprint(LPVOID pParam, string s)
 	WaitForSingleObject(p->mutex, INFINITE);
 	cout << s << endl;
 	ReleaseMutex(p->mutex);
+}
+
+void Window::getMouseSquare(sf::Vector2i mousePos, int squareCoords[2])
+{
+	squareCoords[0] = floor((mousePos.y - 30) / 70);
+	squareCoords[1] = floor((mousePos.x - 30) / 70);
+}
+
+vector<string> Window::setPiecePositions(char board[8][8])
+{
+	vector<string> available = { "b1", "b2", "B1", "B2", "k", "K", "n1", "n2", "N1", "N2", "q", "Q", "r1", "r2", "R1", "R2" };
+	for (int i = 1; i < 9; i++)
+	{
+		available.push_back("p" + to_string(i));
+	}
+	for (int i = 1; i < 9; i++)
+	{
+		available.push_back("P" + to_string(i));
+	}
+	vector<string> pieceNames;
+
+	for (int y = 0; y < 8; y++)
+	{
+		for (int x = 0; x < 8; x++)
+		{
+			if (board[y][x] != ' ')
+			{
+				char pieceChar = board[y][x];
+				string pieceName = "";
+				for (int i = 0; i < available.size(); i++)
+				{
+					if (available[i][0] == pieceChar)
+					{
+						pieceName = available[i];
+						break;
+					}
+				}
+
+				available.erase(std::remove(available.begin(), available.end(), pieceName), available.end());
+				((sf::Sprite*)objects[pieceName])->setPosition(piecePos[y][x].x, piecePos[y][x].y);
+				pieceNames.push_back(pieceName);
+			}
+		}
+	}
+
+	return pieceNames;
 }
 
 UINT Window::start(LPVOID pParam)
@@ -58,12 +107,11 @@ UINT Window::start(LPVOID pParam)
 	return 0;
 }
 
-void Window::initializeObjects(LPVOID pParam, string initialFen)
+void Window::initializeObjects(LPVOID pParam, char board[8][8])
 {
 	Parameters *p = ((Parameters*)pParam);
 
 	vector<string> objectNames{ "board_white", "b1", "b2", "B1", "B2", "k", "K", "n1", "n2", "N1", "N2", "q", "Q", "r1", "r2", "R1", "R2" };
-	string pawnString = "";
 	for (int i = 1; i < 9; i++)
 	{
 		objectNames.push_back("p" + to_string(i));
@@ -88,11 +136,6 @@ void Window::initializeObjects(LPVOID pParam, string initialFen)
 		}
 		else
 		{
-			WaitForSingleObject(p->mutex, INFINITE);
-			cout << "objectNames[i][0]: " << objectNames[i][0] << endl;
-			ReleaseMutex(p->mutex);
-			//dprint(pParam, "objectNames[i][0]:" + to_string(char(objectNames[i][0])));
-
 			// convert object name to file name
 			// need to convert names b/c cant name one file 'b' and another 'B'
 			switch (objectNames[i][0])
@@ -141,8 +184,6 @@ void Window::initializeObjects(LPVOID pParam, string initialFen)
 		{
 			int x = textures[i]->getSize().x;
 			int y = textures[i]->getSize().y;
-
-			dprint(pParam, "board size " + to_string(x) + " " + to_string(y));
 		}
 	}
 
@@ -150,37 +191,13 @@ void Window::initializeObjects(LPVOID pParam, string initialFen)
 	((sf::Sprite*)(objects)["board_white"])->setPosition(sf::Vector2f(30.f, 30.f));
 
 	// set the pieces to their squares in the initial fen
-	vector<string> parts = helper::splitToVector(initialFen, '/');
 	map<string, int> pieceIndexes = {{"r",1}, {"n",1}, {"b",1}, {"p",1}, {"R",1}, {"N",1}, {"B",1}, {"P",1}};
-	for (int i = 0; i < parts.size(); i++)
+	for (int y = 0; y < 8; y++)
 	{
-		string partsString = parts[i];
-		dprint(pParam, partsString);
-
-		// replace numbers with spaces, e.g. "4" -> "    " (" " * 4)
-		string processedParts = "";
-		for (int j = 0; j < partsString.length(); j++)
-		{
-			if (isdigit(partsString[j]))
-			{
-				int spaceCount = partsString[j] - '0';
-				string spaceString = "        ";
-				processedParts += spaceString.substr(0, spaceCount);
-			}
-			else
-			{
-				processedParts += partsString[j];
-			}
-		}
-
-		dprint(pParam, "new parts string: " + processedParts);
-		dprint(pParam, "---");
-
-		assert(processedParts.length() == 8);
-		for (int j = 0; j < processedParts.length(); j++)
+		for (int x = 0; x < 8; x++)
 		{
 			string objectName = "";
-			switch (processedParts[j])
+			switch (board[y][x])
 			{
 			case 'r':
 				objectName = "r" + to_string(pieceIndexes["r"]); pieceIndexes["r"]++; break;
@@ -217,7 +234,7 @@ void Window::initializeObjects(LPVOID pParam, string initialFen)
 				//dprint(pParam, "number" + to_string(char(parts[i][j] - '0')));
 				//j += int(partsString[j] - '0');
 				//dprint(pParam, "j moved to " + to_string(j));
-				dprint(pParam, "error bad char");
+				dprint(pParam, "error bad char " + to_string(board[y][x]));
 				break;
 			}
 
@@ -225,7 +242,8 @@ void Window::initializeObjects(LPVOID pParam, string initialFen)
 			{
 				continue;
 			}
-			((sf::Sprite*)(objects)[objectName])->setPosition(boardSquares[i][j]);
+
+			((sf::Sprite*)(objects)[objectName])->setPosition(piecePos[y][x]);
 		}
 		
 	}
@@ -272,14 +290,36 @@ void Window::display(LPVOID pParam)
 {
 	Parameters *p = ((Parameters*)pParam);
 
+	// construct the board from the initial fen
 	string initialFen = "";
 	WaitForSingleObject(p->mutex, INFINITE);
 	initialFen = p->initialFen;
 	ReleaseMutex(p->mutex);
 
-	initializeObjects(pParam, initialFen);
+	sf::Font font;
+	font.loadFromFile("ModernSans-Light.otf");
+
+	sf::Text text;
+	text.setFont(font);
+	text.setCharacterSize(24);
+	text.setFillColor(sf::Color::Black);
+	text.setPosition(sf::Vector2f(650.f, 50.f));
+
+
+
+	char board[8][8];
+	helper::fenToMatrix(initialFen, board);
+
+	WaitForSingleObject(p->mutex, INFINITE);
+	memcpy(p->board, board, 64 * sizeof(char));
+	ReleaseMutex(p->mutex);
+
+	initializeObjects(pParam, board);
 
 	sf::RenderWindow window(sf::VideoMode(1000, 660), "Chess Engine");
+
+	// inside the main loop, between window.clear() and window.display()
+	window.draw(text);
 
 	// draw initial objects
 	window.clear(sf::Color::White);
@@ -291,12 +331,110 @@ void Window::display(LPVOID pParam)
 		window.draw(*i.second);
 	}
 
+	window.draw(text);
+
 	window.display();
+
+	int selection[2] = { -1, -1 };
+	vector<string> piecesToDraw = setPiecePositions(board);
 
 	//--------------------MAIN WINDOW LOOP--------------------------
 
 	while (window.isOpen())
 	{
+#pragma region
+		// get the current board
+		WaitForSingleObject(p->mutex, INFINITE);
+		memcpy(board, p->board, 64 * sizeof(char));
+		ReleaseMutex(p->mutex);
+
+		// get the positions of the pieces to draw from the current board
+		piecesToDraw = setPiecePositions(board);
+
+		window.clear(sf::Color::White);
+
+		window.draw(*objects["board_white"]);
+		if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
+		{
+			window.draw(*objects["selectionRectangle"]);
+		}
+
+		for (int i = 0; i < piecesToDraw.size(); i++)
+		{
+			window.draw(*objects[piecesToDraw[i]]);
+		}
+
+		window.display();
+
+		// check if the game ended
+		bool whiteKingAlive = false;
+		bool blackKingAlive = false;
+		for (int y = 0; y < 8; y++)
+		{
+			for (int x = 0; x < 8; x++)
+			{
+				if (board[y][x] == 'K') { whiteKingAlive = true; }
+				if (board[y][x] == 'k') { blackKingAlive = true; }
+			}
+		}
+		assert(whiteKingAlive || blackKingAlive);
+
+		if (!blackKingAlive)
+		{
+			text.setString("you won!!");
+
+			// get the positions of the pieces to draw from the current board
+			piecesToDraw = setPiecePositions(board);
+
+			window.clear(sf::Color::White);
+			window.draw(*objects["board_white"]);
+			if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
+			{
+				window.draw(*objects["selectionRectangle"]);
+			}
+
+			for (int i = 0; i < piecesToDraw.size(); i++)
+			{
+				window.draw(*objects[piecesToDraw[i]]);
+			}
+
+			window.display();
+
+			window.draw(text);
+			window.display();
+			Sleep(2000);
+			window.close();
+		}
+		if (!whiteKingAlive)
+		{
+			text.setString("you lost!! (how??)");
+
+			// get the positions of the pieces to draw from the current board
+			piecesToDraw = setPiecePositions(board);
+
+			window.clear(sf::Color::White);
+			window.draw(*objects["board_white"]);
+			if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
+			{
+				window.draw(*objects["selectionRectangle"]);
+			}
+
+			for (int i = 0; i < piecesToDraw.size(); i++)
+			{
+				window.draw(*objects[piecesToDraw[i]]);
+			}
+
+			window.display();
+
+			window.draw(text);
+			window.display();
+			Sleep(2000);
+			window.close();
+		}
+
+
+#pragma endregion
+
 		//-------------------POLL EVENTS----------------------------
 		sf::Event event;
 		while (window.pollEvent(event))
@@ -307,94 +445,162 @@ void Window::display(LPVOID pParam)
 			else if (event.type == sf::Event::MouseButtonPressed)
 			{
 				sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-				dprint(pParam, "mouse position " + to_string(mousePos.x) + " " + to_string(mousePos.y));
-
-				int squarePosX = floor((mousePos.x - 30) / 70) * 70 + 30;
-				int squarePosY = floor((mousePos.y - 30) / 70) * 70 + 30;
-
-				// only set new position if button press is inside the board
-				if (std::max(squarePosX, squarePosY) < 590 && squarePosX > 0)
+				if (dpr)
 				{
-					((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(squarePosX, squarePosY);
+					cout << "----NEW MOVE----" << endl;
+					dprint(pParam, "mouse position " + to_string(mousePos.x) + " " + to_string(mousePos.y));
 				}
 
-				// need conversion between mouse position -> board square -> object on that square
-				// string called "selection" would store the piece that is currently selected, e.g. "N2"
+				int squareY = floor((mousePos.y - 30) / 70);
+				int squareX = floor((mousePos.x - 30) / 70);
 
-				// when the mouse clicks on a square, check if selection string has a piece
-				//	if yes, then check if there is an enemy piece on that square
-				//		if yes, that is a capture, implement later
-				//		if no, then move the piece to that square and send that move to the engine
-
-				map<string, vector<string>> legalMoves = helper::getLegalMoves(initialFen, true);
-				for (auto i : legalMoves)
-				{
-					cout << i.first << ": ";
-					for (int j = 0; j < i.second.size(); j++)
-					{
-						cout << i.second[j] << " ";
-					}
-					cout << endl;
-				}
-
-				((sf::Sprite*)objects["N2"])->setPosition(boardSquares[5][5]);
-
-				window.clear(sf::Color::White);
-
-				window.draw(*objects["board_white"]);
-
-				for (auto i : objects)
-				{
-					if (i.first == "board_white" || i.first == "selectionRectangle")
-					{
-						continue;
-					}
-					window.draw(*i.second);
-				}
-
-				if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
-				{
-					window.draw(*objects["selectionRectangle"]);
-				}
-				
-					
-
-				//sf::Texture texture;
-				//texture.loadFromFile("p_black.png");
-
-				//sf::Sprite sprite2;
-				//sprite2.setTexture(texture);
-				//sprite2.setPosition(sf::Vector2f(100.f, 50.f));
-				//map<string, sf::Sprite> objects2;
-				//objects2["a"] = sprite2;
-				//window.draw(objects2["a"]);
-
-				window.display();
-
-				// proceed if move is empty
-				string move = "";
+				bool playerToMove = false;
 				WaitForSingleObject(p->mutex, INFINITE);
-				move = p->move;
-				ReleaseMutex(p->mutex);
-				if (move != "")
-				{
-					continue;
-				}
-
-				WaitForSingleObject(p->mutex, INFINITE);
-				cout << "window: sending ";
-				move = "p";
-				//std::getline(cin, move);
-				p->move = move;
+				playerToMove = p->playerToMove;
 				ReleaseMutex(p->mutex);
 
-				// if the move is "q", then stop
-				if (move == "q")
+				bool clickedInBoard = max(squarePos[squareY][squareX].x, squarePos[squareY][squareX].y) < 590 && min(squarePos[squareY][squareX].x, squarePos[squareY][squareX].y) >= 30;
+
+				// used to decide if it is engines turn after mouse click
+				bool madeMove = false;
+
+				// only process a click in the board if players turn
+				if (clickedInBoard && playerToMove)
 				{
-					window.close();
+					// get the current board from parameters
+					WaitForSingleObject(p->mutex, INFINITE);
+					memcpy(board, p->board, 64 * sizeof(char));
+					ReleaseMutex(p->mutex);
+
+					int targetSquare[2];
+					getMouseSquare(mousePos, targetSquare);
+
+					//if (dpr)
+					//{
+					//	cout << "target square " << targetSquare[0] << " " << targetSquare[1] << endl;
+					//	cout << "selection " << selection << endl;
+					//}
+
+					// select the players piece if selection string is empty
+					if(selection[0] == -1)
+					{
+						((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(squarePos[squareY][squareX]);
+						selection[0] = squareY;
+						selection[1] = squareX;
+					}
+
+					// attempt to move the players piece if selection string is full
+					else
+					{
+						bool validMove = true;
+
+						// if the target square is the same as the selection square, then deselect
+						if (selection[0] == targetSquare[0] && selection[1] == targetSquare[1])
+						{
+							validMove = false;
+						}
+
+						// check if the target square is a legal move for the selected piece
+						string from = to_string(selection[0]) + to_string(selection[1]);
+						string to = to_string(targetSquare[0]) + to_string(targetSquare[1]);
+						
+						// deselect if not legal
+						vector<string> legalMoves = helper::getLegalMoves(board, true)[from];
+						if (find(legalMoves.begin(), legalMoves.end(), to) == legalMoves.end())
+						{
+							validMove = false;
+						}
+
+						if (validMove)
+						{
+							if (dpr)
+							{
+								cout << "\nwindow's turn:" << endl;
+								for (int i = 0; i < 8; i++)
+								{
+									for (int j = 0; j < 8; j++)
+									{
+										cout << board[i][j] << " ";
+									}
+									cout << endl;
+								}
+								cout << "--------" << endl;
+							}
+
+							// modify the board
+							char movedPiece = board[selection[0]][selection[1]];
+							board[selection[0]][selection[1]] = ' ';
+							board[targetSquare[0]][targetSquare[1]] = movedPiece;
+
+							// send board to parameters
+							WaitForSingleObject(p->mutex, INFINITE);
+							memcpy(p->board, board, 64 * sizeof(char));
+							ReleaseMutex(p->mutex);
+
+							// indicate that it is the engine's turn
+							madeMove = true;
+						}
+
+						((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+						selection[0] = -1;
+					}
+				}
+
+				// if mouse clicked outside the board
+				else if(!clickedInBoard)
+				{
+					((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+					selection[0] = -1;
+				}
+
+				if (dpr)
+				{
+					cout << "--------" << endl;
+				}
+
+				char printBoard[8][8];
+				WaitForSingleObject(p->mutex, INFINITE);
+				memcpy(printBoard, p->board, 64 * sizeof(char));
+				ReleaseMutex(p->mutex);
+
+				if (dpr && madeMove)
+				{
+					for (int i = 0; i < 8; i++)
+					{
+						for (int j = 0; j < 8; j++)
+						{
+							cout << printBoard[i][j] << " ";
+						}
+						cout << endl;
+					}
+					cout << "--------" << endl;
+				}
+
+				//map<string, vector<string>> legalMoves = helper::getLegalMoves(board, true);
+
+				//if (dpr)
+				//{
+				//	for (auto i : legalMoves)
+				//	{
+				//		cout << i.first << ": ";
+				//		for (int j = 0; j < i.second.size(); j++)
+				//		{
+				//			cout << i.second[j] << " ";
+				//		}
+				//		cout << endl;
+				//	}
+				//}
+
+
+
+				// switch to engine's turn if a move was made
+				if (madeMove)
+				{
+					WaitForSingleObject(p->mutex, INFINITE);
+					p->playerToMove = false;
+					ReleaseMutex(p->mutex);
 				}
 			}
-
 		}
 	}
 }

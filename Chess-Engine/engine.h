@@ -6,24 +6,35 @@
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <vector>
+#include <map>
+#include <iterator>
+#include <cstdlib>
+#include <algorithm>
+#include <ctime>
 
 #include "parameters.h"
+#include "helper.h"
 
 using std::cout;
 using std::endl;
 using std::string;
+using std::vector;
+using std::map;
+using std::iterator;
+using std::max;
 
 class Engine
 {
 public:
 
-	Engine();
+	Engine(bool enginePrint);
 
 	UINT start(LPVOID pParam);
 
 private:
 
-	string fen;
+	bool dpr = false;
 };
 
 #endif

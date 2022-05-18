@@ -14,7 +14,11 @@ namespace helper
 {
 	vector<string> splitToVector(string str, char del);
 
-	map<string, vector<string>> getLegalMoves(string fen, bool whiteToMove);
+	void fenToMatrix(string fen, char matrix[8][8]);
+
+	map<string, vector<string>> getLegalMoves(char board[8][8], bool whiteToMove);
+
+	float getPieceValue(char piece);
 }
 
 #endif

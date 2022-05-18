@@ -4,12 +4,8 @@
 #define NOMINMAX
 #include <windows.h>
 #include <iostream>
-#include <vector>
-#include <map>
 
 using std::string;
-using std::map;
-using std::vector;
 
 // this class is passed to all threads, acts as shared memory
 class Parameters {
@@ -18,10 +14,13 @@ public:
 	HANDLE	finished;
 	HANDLE	eventQuit;
 
+	bool windowPrint = false;
+	bool enginePrint = false;
+
 	string initialFen = "";
 
-	string move = "";
-	map<string, vector<string>> legalMoves;
+	bool playerToMove = true;
+	char board[8][8];
 
 	bool windowClosed = false;
 };

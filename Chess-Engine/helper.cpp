@@ -25,7 +25,7 @@ vector<string> helper::splitToVector(string str, char del)
 	return splitResult;
 }
 
-map<string, vector<string>> helper::getLegalMoves(string fen, bool whiteToMove)
+void helper::fenToMatrix(string fen, char matrix[8][8])
 {
 	// replace numbers with spaces, e.g. "4" -> "    " (" " * 4)
 	vector<string> parts = helper::splitToVector(fen, '/');
@@ -51,16 +51,17 @@ map<string, vector<string>> helper::getLegalMoves(string fen, bool whiteToMove)
 		processedParts.push_back(processedPartsString);
 	}
 
-	// load the board
-	char board[8][8];
 	for (int i = 0; i < 8; i++)
 	{
 		for (int j = 0; j < 8; j++)
 		{
-			board[i][j] = processedParts[i][j];
+			matrix[i][j] = processedParts[i][j];
 		}
 	}
+}
 
+map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteToMove)
+{
 	// load the legal moves; white to move
 	map<string, vector<string>> legalMoves;
 	if (whiteToMove)
@@ -715,4 +716,34 @@ map<string, vector<string>> helper::getLegalMoves(string fen, bool whiteToMove)
 	}
 
 	return legalMoves;
+}
+
+float helper::getPieceValue(char piece)
+{
+	switch (piece)
+	{
+	case 'K':
+	case 'k':
+		return 100;
+
+	case 'Q':
+	case 'q':
+		return 9;
+
+	case 'R':
+	case 'r':
+		return 5;
+
+	case 'B':
+	case 'b':
+		return 3.2;
+
+	case 'N':
+	case 'n':
+		return 3;
+
+	case 'P':
+	case 'p':
+		return 1;
+	}
 }
