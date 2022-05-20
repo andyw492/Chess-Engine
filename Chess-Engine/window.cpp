@@ -72,6 +72,8 @@ vector<string> Window::setPiecePositions(char board[8][8])
 					}
 				}
 
+				assert(pieceName != "");
+
 				available.erase(std::remove(available.begin(), available.end(), pieceName), available.end());
 				((sf::Sprite*)objects[pieceName])->setPosition(piecePos[y][x].x, piecePos[y][x].y);
 				pieceNames.push_back(pieceName);
@@ -92,14 +94,15 @@ UINT Window::start(LPVOID pParam)
 
 	display(pParam);
 
+	// tell engine that window is closed
 	WaitForSingleObject(p->mutex, INFINITE);
 	p->windowClosed = true;
 	ReleaseMutex(p->mutex);
 
+	// thread exit
 	ReleaseSemaphore(p->finished, 1, NULL);
 	WaitForSingleObject(p->eventQuit, INFINITE);
 
-	// print we're about to exit
 	WaitForSingleObject(p->mutex, INFINITE);
 	printf("windowThread %d quitting on event\n", GetCurrentThreadId());
 	ReleaseMutex(p->mutex);
@@ -305,8 +308,6 @@ void Window::display(LPVOID pParam)
 	text.setFillColor(sf::Color::Black);
 	text.setPosition(sf::Vector2f(650.f, 50.f));
 
-
-
 	char board[8][8];
 	helper::fenToMatrix(initialFen, board);
 
@@ -407,7 +408,7 @@ void Window::display(LPVOID pParam)
 		}
 		if (!whiteKingAlive)
 		{
-			text.setString("you lost!! (how??)");
+			text.setString("you lost!!");
 
 			// get the positions of the pieces to draw from the current board
 			piecesToDraw = setPiecePositions(board);
@@ -459,7 +460,7 @@ void Window::display(LPVOID pParam)
 				playerToMove = p->playerToMove;
 				ReleaseMutex(p->mutex);
 
-				bool clickedInBoard = max(squarePos[squareY][squareX].x, squarePos[squareY][squareX].y) < 590 && min(squarePos[squareY][squareX].x, squarePos[squareY][squareX].y) >= 30;
+				bool clickedInBoard = max(mousePos.x, mousePos.y) < 590 && min(mousePos.x, mousePos.y) >= 30;
 
 				// used to decide if it is engines turn after mouse click
 				bool madeMove = false;
@@ -505,7 +506,11 @@ void Window::display(LPVOID pParam)
 						string to = to_string(targetSquare[0]) + to_string(targetSquare[1]);
 						
 						// deselect if not legal
-						vector<string> legalMoves = helper::getLegalMoves(board, true)[from];
+						bool castling[4];
+						WaitForSingleObject(p->mutex, INFINITE);
+						memcpy(castling, p->castling, 4 * sizeof(bool));
+						ReleaseMutex(p->mutex);
+						vector<string> legalMoves = helper::getLegalMoves(board, true, castling)[from];
 						if (find(legalMoves.begin(), legalMoves.end(), to) == legalMoves.end())
 						{
 							validMove = false;
@@ -527,14 +532,77 @@ void Window::display(LPVOID pParam)
 								cout << "--------" << endl;
 							}
 
-							// modify the board
-							char movedPiece = board[selection[0]][selection[1]];
-							board[selection[0]][selection[1]] = ' ';
-							board[targetSquare[0]][targetSquare[1]] = movedPiece;
+							// check for special moves (castling, promotion, en passant)
+							// 0 == normal move
+							// 1 == white castles kingside
+							// 2 == white castles queenside
+							// 3 == black castles kingside
+							// 4 == black castles queenside
+							// 5 == promotion (destination square in legal moves formatted like "e8=Q")
+							// 6 == en passant
 
-							// send board to parameters
+							int moveType = 0;
+							if (from == "74" && to == "76") { moveType = 1; }
+							if (from == "74" && to == "72") { moveType = 2; }
+							if (from == "04" && to == "06") { moveType = 3; }
+							if (from == "04" && to == "02") { moveType = 4; }
+
+							// modify the board and send to parameters
+							switch (moveType)
+							{
+							case 0:
+							{
+								char movedPiece = board[selection[0]][selection[1]];
+								board[selection[0]][selection[1]] = ' ';
+								board[targetSquare[0]][targetSquare[1]] = movedPiece;
+								break;
+							}
+							case 1:
+							{
+								board[7][4] = ' ';
+								board[7][5] = 'R';
+								board[7][6] = 'K';
+								board[7][7] = ' ';
+								break;
+							}
+							case 2:
+							{
+								board[7][0] = ' ';
+								board[7][2] = 'K';
+								board[7][3] = 'R';
+								board[7][4] = ' ';
+								break;
+							}
+							case 3:
+							{
+								board[0][4] = ' ';
+								board[0][5] = 'r';
+								board[0][6] = 'k';
+								board[0][7] = ' ';
+								break;
+							}
+							case 4:
+							{
+								board[0][0] = ' ';
+								board[0][2] = 'k';
+								board[0][3] = 'r';
+								board[0][4] = ' ';
+								break;
+							}
+							}
+
 							WaitForSingleObject(p->mutex, INFINITE);
 							memcpy(p->board, board, 64 * sizeof(char));
+							ReleaseMutex(p->mutex);
+
+							// modify castling permissions and send to parameters
+							if (from == "74" || from == "77") { castling[0] = false; }
+							if (from == "74" || from == "70") { castling[1] = false; }
+							if (from == "04" || from == "07") { castling[2] = false; }
+							if (from == "04" || from == "00") { castling[3] = false; }
+
+							WaitForSingleObject(p->mutex, INFINITE);
+							memcpy(p->castling, castling, 4 * sizeof(bool));
 							ReleaseMutex(p->mutex);
 
 							// indicate that it is the engine's turn
@@ -576,22 +644,23 @@ void Window::display(LPVOID pParam)
 					cout << "--------" << endl;
 				}
 
-				//map<string, vector<string>> legalMoves = helper::getLegalMoves(board, true);
-
-				//if (dpr)
-				//{
-				//	for (auto i : legalMoves)
-				//	{
-				//		cout << i.first << ": ";
-				//		for (int j = 0; j < i.second.size(); j++)
-				//		{
-				//			cout << i.second[j] << " ";
-				//		}
-				//		cout << endl;
-				//	}
-				//}
-
-
+				if (dpr)
+				{
+					bool castling[4];
+					WaitForSingleObject(p->mutex, INFINITE);
+					memcpy(castling, p->castling, 4 * sizeof(bool));
+					ReleaseMutex(p->mutex);
+					map<string, vector<string>> legalMoves = helper::getLegalMoves(board, true, castling);
+					for (auto i : legalMoves)
+					{
+						cout << i.first << ": ";
+						for (int j = 0; j < i.second.size(); j++)
+						{
+							cout << i.second[j] << " ";
+						}
+						cout << endl;
+					}
+				}
 
 				// switch to engine's turn if a move was made
 				if (madeMove)

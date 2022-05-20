@@ -22,6 +22,9 @@ public:
 	bool playerToMove = true;
 	char board[8][8];
 
+	// {white kingside allowed, white queenside allowed, black kingside allowed, black queenside allowed}
+	bool castling[4] = { true, true, true, true };
+
 	bool windowClosed = false;
 };
 

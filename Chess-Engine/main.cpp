@@ -65,7 +65,7 @@ int main(void)
 	p.initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
 	// debug
-	int debugVal = 1;
+	int debugVal = 2;
 	p.windowPrint = debugVal % 2 == 0;
 	p.enginePrint = debugVal % 3 == 0;
 

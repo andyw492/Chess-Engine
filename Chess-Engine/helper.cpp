@@ -60,7 +60,7 @@ void helper::fenToMatrix(string fen, char matrix[8][8])
 	}
 }
 
-map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteToMove)
+map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteToMove, bool castling[4])
 {
 	// load the legal moves; white to move
 	map<string, vector<string>> legalMoves;
@@ -310,6 +310,16 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 
 				case 'K':
 				{
+					// castling
+					if (castling[0] && board[7][5] == ' ' && board[7][6] == ' ')
+					{
+						pieceMoves.push_back("76");
+					}
+					if (castling[1] && board[7][1] == ' ' && board[7][2] == ' ' && board[7][3] == ' ')
+					{
+						pieceMoves.push_back("72");
+					}
+
 					// top left
 					int y = i - 1;
 					int x = j - 1;
@@ -636,6 +646,16 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 
 				case 'k':
 				{
+					// castling
+					if (castling[2] && board[0][5] == ' ' && board[0][6] == ' ')
+					{
+						pieceMoves.push_back("06");
+					}
+					if (castling[3] && board[0][1] == ' ' && board[0][2] == ' ' && board[0][3] == ' ')
+					{
+						pieceMoves.push_back("02");
+					}
+
 					// top left
 					int y = i - 1;
 					int x = j - 1;

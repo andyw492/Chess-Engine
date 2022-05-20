@@ -60,7 +60,16 @@ UINT Engine::start(LPVOID pParam)
 			cout << "--------" << endl;
 		}
 
-		map<string, vector<string>> legalMoves = helper::getLegalMoves(board, false);
+
+
+		string from = "";
+		string to = "";
+
+		bool castling[4];
+		WaitForSingleObject(p->mutex, INFINITE);
+		memcpy(castling, p->castling, 4 * sizeof(bool));
+		ReleaseMutex(p->mutex);
+		map<string, vector<string>> legalMoves = helper::getLegalMoves(board, false, castling);
 
 		if (dpr)
 		{
@@ -74,9 +83,6 @@ UINT Engine::start(LPVOID pParam)
 				cout << endl;
 			}
 		}
-
-		string from = "";
-		string to = "";
 
 		// if an enemy piece is capturable, then capture the most valuable
 		// (king > queen > rook > bishop > knight > pawn)
@@ -124,13 +130,78 @@ UINT Engine::start(LPVOID pParam)
 			cout << "engine from " << from << " to " << to << endl;
 		}
 
-		// "thinking"
-		Sleep(200);
+		// check for special moves (castling, promotion, en passant)
+		// 0 == normal move
+		// 1 == white castles kingside
+		// 2 == white castles queenside
+		// 3 == black castles kingside
+		// 4 == black castles queenside
+		// 5 == promotion (destination square in legal moves formatted like "e8=Q")
+		// 6 == en passant
 
-		// modify board
-		char movedPiece = board[from[0] - 48][from[1] - 48];
-		board[from[0] - 48][from[1] - 48] = ' ';
-		board[to[0] - 48][to[1] - 48] = movedPiece;
+		int moveType = 0;
+		if (from == "74" && to == "76") { moveType = 1; }
+		if (from == "74" && to == "72") { moveType = 2; }
+		if (from == "04" && to == "06") { moveType = 3; }
+		if (from == "04" && to == "02") { moveType = 4; }
+
+		// modify the board and send to parameters
+		switch (moveType)
+		{
+		case 0:
+		{
+			char movedPiece = board[from[0] - 48][from[1] - 48];
+			board[from[0] - 48][from[1] - 48] = ' ';
+			board[to[0] - 48][to[1] - 48] = movedPiece;
+			break;
+		}
+		case 1:
+		{
+			board[7][4] = ' ';
+			board[7][5] = 'R';
+			board[7][6] = 'K';
+			board[7][7] = ' ';
+			break;
+		}
+		case 2:
+		{
+			board[7][0] = ' ';
+			board[7][2] = 'K';
+			board[7][3] = 'R';
+			board[7][4] = ' ';
+			break;
+		}
+		case 3:
+		{
+			board[0][4] = ' ';
+			board[0][5] = 'r';
+			board[0][6] = 'k';
+			board[0][7] = ' ';
+			break;
+		}
+		case 4:
+		{
+			board[0][0] = ' ';
+			board[0][2] = 'k';
+			board[0][3] = 'r';
+			board[0][4] = ' ';
+			break;
+		}
+		}
+
+		WaitForSingleObject(p->mutex, INFINITE);
+		memcpy(p->board, board, 64 * sizeof(char));
+		ReleaseMutex(p->mutex);
+
+		// modify castling permissions and send to parameters
+		if (from == "74" || from == "77") { castling[0] = false; }
+		if (from == "74" || from == "70") { castling[1] = false; }
+		if (from == "04" || from == "07") { castling[2] = false; }
+		if (from == "04" || from == "00") { castling[3] = false; }
+
+		WaitForSingleObject(p->mutex, INFINITE);
+		memcpy(p->castling, castling, 4 * sizeof(bool));
+		ReleaseMutex(p->mutex);
 
 		if (dpr)
 		{
@@ -145,22 +216,17 @@ UINT Engine::start(LPVOID pParam)
 			cout << "--------" << endl;
 		}
 
-		// send board to parameters
-		WaitForSingleObject(p->mutex, INFINITE);
-		memcpy(p->board, board, 64 * sizeof(char));
-		ReleaseMutex(p->mutex);
-
-		// skip engine's move
+		// indicate that it is the player's move
 		WaitForSingleObject(p->mutex, INFINITE);
 		p->playerToMove = true;
 		ReleaseMutex(p->mutex);
 
 	}
 
+	// thread exit
 	ReleaseSemaphore(p->finished, 1, NULL);
 	WaitForSingleObject(p->eventQuit, INFINITE);
 
-	// print we're about to exit
 	WaitForSingleObject(p->mutex, INFINITE);
 	printf("engineThread %d quitting on event\n", GetCurrentThreadId());
 	ReleaseMutex(p->mutex);

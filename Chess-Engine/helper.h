@@ -16,7 +16,7 @@ namespace helper
 
 	void fenToMatrix(string fen, char matrix[8][8]);
 
-	map<string, vector<string>> getLegalMoves(char board[8][8], bool whiteToMove);
+	map<string, vector<string>> getLegalMoves(char board[8][8], bool whiteToMove, bool castling[4]);
 
 	float getPieceValue(char piece);
 }
