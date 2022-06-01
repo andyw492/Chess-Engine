@@ -1,20 +1,12 @@
-﻿  engine.cpp
-c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(79): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(92): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(103): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(112): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-  window.cpp
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(20): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(41): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(42): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(66): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(133): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(363): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(397): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(423): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(455): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(456): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(657): warning C4018: '<': signed/unsigned mismatch
-  Generating Code...
+﻿  helper.cpp
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(33): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(37): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(110): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(446): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(760): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(804): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(947): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(989): warning C4305: 'return': truncation from 'double' to 'float'
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(999): warning C4715: 'helper::getPieceValue': not all control paths return a value
 LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/FORCE' specification
   Chess-Engine.vcxproj -> C:\Users\Andy Wang\source\repos\Chess-Engine\Debug\Chess-Engine.exe

@@ -45,23 +45,6 @@ UINT Engine::start(LPVOID pParam)
 		memcpy(board, p->board, 64 * sizeof(char));
 		ReleaseMutex(p->mutex);
 
-		if (dpr)
-		{
-			Sleep(500);
-			cout << "\nengine's turn:" << endl;
-			for (int i = 0; i < 8; i++)
-			{
-				for (int j = 0; j < 8; j++)
-				{
-					cout << board[i][j] << " ";
-				}
-				cout << endl;
-			}
-			cout << "--------" << endl;
-		}
-
-
-
 		string from = "";
 		string to = "";
 
@@ -69,10 +52,25 @@ UINT Engine::start(LPVOID pParam)
 		WaitForSingleObject(p->mutex, INFINITE);
 		memcpy(castling, p->castling, 4 * sizeof(bool));
 		ReleaseMutex(p->mutex);
-		map<string, vector<string>> legalMoves = helper::getLegalMoves(board, false, castling);
+
+		clock_t legalMovesStart = clock();
+		map<string, vector<string>> legalMoves = helper::getLegalMoves(board, false, castling, false);
+		clock_t legalMovesEnd = clock();
 
 		if (dpr)
 		{
+			cout << "----------------- ENGINE -----------------\n" << endl;
+
+			for (int y = 0; y < 8; y++)
+			{
+				for (int x = 0; x < 8; x++)
+				{
+					cout << board[y][x] << " ";
+				}
+				cout << endl;
+			}
+			cout << endl;
+
 			for (auto i : legalMoves)
 			{
 				cout << i.first << ": ";
@@ -82,6 +80,9 @@ UINT Engine::start(LPVOID pParam)
 				}
 				cout << endl;
 			}
+			cout << endl;
+
+			cout << "legal moves found in " << 1000.0 * (legalMovesEnd - legalMovesStart) / CLOCKS_PER_SEC << " ms\n" << endl;
 		}
 
 		// if an enemy piece is capturable, then capture the most valuable
@@ -127,7 +128,7 @@ UINT Engine::start(LPVOID pParam)
 
 		if (dpr)
 		{
-			cout << "engine from " << from << " to " << to << endl;
+			//cout << "engine from " << from << " to " << to << endl;
 		}
 
 		// check for special moves (castling, promotion, en passant)
@@ -213,7 +214,7 @@ UINT Engine::start(LPVOID pParam)
 				}
 				cout << endl;
 			}
-			cout << "--------" << endl;
+			cout << endl;
 		}
 
 		// indicate that it is the player's move

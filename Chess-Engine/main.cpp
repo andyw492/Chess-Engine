@@ -62,10 +62,10 @@ int main(void)
 	p.finished = CreateSemaphore(NULL, 0, threadCount, NULL);
 	p.eventQuit = CreateEvent(NULL, true, false, NULL);
 
-	p.initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+	p.initialFen = "r2qkbnr/pp1ppp2/2b1n1p1/2p4p/4P3/5K2/PPPP1PPP/RNBQ1BNR";
 
 	// debug
-	int debugVal = 2;
+	int debugVal = 60;
 	p.windowPrint = debugVal % 2 == 0;
 	p.enginePrint = debugVal % 3 == 0;
 

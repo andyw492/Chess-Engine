@@ -23,6 +23,7 @@ using std::vector;
 using std::map;
 using std::iterator;
 using std::max;
+using std::clock_t;
 
 class Engine
 {
