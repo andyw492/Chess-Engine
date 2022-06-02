@@ -62,7 +62,8 @@ int main(void)
 	p.finished = CreateSemaphore(NULL, 0, threadCount, NULL);
 	p.eventQuit = CreateEvent(NULL, true, false, NULL);
 
-	p.initialFen = "r2qkbnr/pp1ppp2/2b1n1p1/2p4p/4P3/5K2/PPPP1PPP/RNBQ1BNR";
+	p.initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+	for (int i = 0; i < 4; i++) { p.castling[i] = false; }
 
 	// debug
 	int debugVal = 60;

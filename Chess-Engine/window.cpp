@@ -44,7 +44,7 @@ void Window::getMouseSquare(sf::Vector2i mousePos, int squareCoords[2])
 
 vector<string> Window::setPiecePositions(char board[8][8])
 {
-	vector<string> available = { "b1", "b2", "B1", "B2", "k", "K", "n1", "n2", "N1", "N2", "q", "Q", "r1", "r2", "R1", "R2" };
+	vector<string> available = { "b1", "b2", "B1", "B2", "k", "K", "n1", "n2", "N1", "N2", "r1", "r2", "R1", "R2" };
 	for (int i = 1; i < 9; i++)
 	{
 		available.push_back("p" + to_string(i));
@@ -52,6 +52,14 @@ vector<string> Window::setPiecePositions(char board[8][8])
 	for (int i = 1; i < 9; i++)
 	{
 		available.push_back("P" + to_string(i));
+	}
+	for (int i = 1; i < 9; i++)
+	{
+		available.push_back("q" + to_string(i));
+	}
+	for (int i = 1; i < 9; i++)
+	{
+		available.push_back("Q" + to_string(i));
 	}
 	vector<string> pieceNames;
 
@@ -114,7 +122,7 @@ void Window::initializeObjects(LPVOID pParam, char board[8][8])
 {
 	Parameters *p = ((Parameters*)pParam);
 
-	vector<string> objectNames{ "board_white", "b1", "b2", "B1", "B2", "k", "K", "n1", "n2", "N1", "N2", "q", "Q", "r1", "r2", "R1", "R2" };
+	vector<string> objectNames{ "board_white", "b1", "b2", "B1", "B2", "k", "K", "n1", "n2", "N1", "N2", "r1", "r2", "R1", "R2" };
 	for (int i = 1; i < 9; i++)
 	{
 		objectNames.push_back("p" + to_string(i));
@@ -122,6 +130,14 @@ void Window::initializeObjects(LPVOID pParam, char board[8][8])
 	for (int i = 1; i < 9; i++)
 	{
 		objectNames.push_back("P" + to_string(i));
+	}
+	for (int i = 1; i < 9; i++)
+	{
+		objectNames.push_back("q" + to_string(i));
+	}
+	for (int i = 1; i < 9; i++)
+	{
+		objectNames.push_back("Q" + to_string(i));
 	}
 
 	//for (int i = 0; i < objectNames.size(); i++)
@@ -194,7 +210,7 @@ void Window::initializeObjects(LPVOID pParam, char board[8][8])
 	((sf::Sprite*)(objects)["board_white"])->setPosition(sf::Vector2f(30.f, 30.f));
 
 	// set the pieces to their squares in the initial fen
-	map<string, int> pieceIndexes = {{"r",1}, {"n",1}, {"b",1}, {"p",1}, {"R",1}, {"N",1}, {"B",1}, {"P",1}};
+	map<string, int> pieceIndexes = { {"r",1}, {"n",1}, {"b",1}, {"p",1}, {"q",1}, {"R",1}, {"N",1}, {"B",1}, {"P",1}, {"Q",1} };
 	for (int y = 0; y < 8; y++)
 	{
 		for (int x = 0; x < 8; x++)
@@ -209,7 +225,7 @@ void Window::initializeObjects(LPVOID pParam, char board[8][8])
 			case 'b':
 				objectName = "b" + to_string(pieceIndexes["b"]); pieceIndexes["b"]++; break;
 			case 'q':
-				objectName = "q"; break;
+				objectName = "q" + to_string(pieceIndexes["q"]); pieceIndexes["q"]++; break;
 			case 'k':
 				objectName = "k"; break;
 			case 'p':
@@ -222,7 +238,7 @@ void Window::initializeObjects(LPVOID pParam, char board[8][8])
 			case 'B':
 				objectName = "B" + to_string(pieceIndexes["B"]); pieceIndexes["B"]++; break;
 			case 'Q':
-				objectName = "Q"; break;
+				objectName = "Q" + to_string(pieceIndexes["Q"]); pieceIndexes["Q"]++; break;
 			case 'K':
 				objectName = "K"; break;
 			case 'P':
@@ -339,13 +355,27 @@ void Window::display(LPVOID pParam)
 	int selection[2] = { -1, -1 };
 	vector<string> piecesToDraw = setPiecePositions(board);
 
+	// rectangles that indicate legal moves
+	// stored outside objects map because a vector is more appropriate
+	vector<sf::RectangleShape> legalRectangles;
+	for (int i = 0; i < 64; i++)
+	{
+		sf::RectangleShape rectangle;
+		rectangle.setSize(sf::Vector2f(70, 70));
+		rectangle.setOutlineColor(sf::Color(150, 191, 255, 170));
+		rectangle.setFillColor(sf::Color::Transparent);
+		rectangle.setOutlineThickness(-3);
+		rectangle.setPosition(0, 0);
+		legalRectangles.push_back(rectangle);
+	}
+
 	int printedLegal = false;
 
 	//--------------------MAIN WINDOW LOOP--------------------------
 
 	while (window.isOpen())
 	{
-		// display the current board
+		// draw the current board's objects to window
 #pragma region
 		WaitForSingleObject(p->mutex, INFINITE);
 		memcpy(board, p->board, 64 * sizeof(char));
@@ -359,6 +389,14 @@ void Window::display(LPVOID pParam)
 		if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
 		{
 			window.draw(*objects["selectionRectangle"]);
+		}
+
+		for (int i = 0; i < legalRectangles.size(); i++)
+		{
+			if (legalRectangles[i].getPosition().x > 0)
+			{
+				window.draw(legalRectangles[i]);
+			}
 		}
 
 		for (int i = 0; i < piecesToDraw.size(); i++)
@@ -452,10 +490,15 @@ void Window::display(LPVOID pParam)
 				{
 					printedLegal = true;
 					bool castling[4];
+					string enpassant = "";
 					WaitForSingleObject(p->mutex, INFINITE);
 					memcpy(castling, p->castling, 4 * sizeof(bool));
+					enpassant = p->enpassant;
 					ReleaseMutex(p->mutex);
-					map<string, vector<string>> legalMoves = helper::getLegalMoves(board, true, castling, true);
+
+					auto begin = std::chrono::high_resolution_clock::now();
+					map<string, vector<string>> legalMoves = helper::getLegalMoves(board, true, castling, enpassant, true);
+					auto end = std::chrono::high_resolution_clock::now();
 
 					cout << "----------------- WINDOW -----------------\n" << endl;
 
@@ -479,6 +522,8 @@ void Window::display(LPVOID pParam)
 						cout << endl;
 					}
 					cout << endl;
+
+					printf("legal moves found in %.3f ms\n", float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
 				}
 			}
 
@@ -521,22 +566,44 @@ void Window::display(LPVOID pParam)
 					//}
 
 					// select the players piece if selection string is empty
-					if(selection[0] == -1)
+					if(selection[0] == -1 && board[targetSquare[0]][targetSquare[1]] >= 65 && board[targetSquare[0]][targetSquare[1]] <= 90)
 					{
 						((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(squarePos[squareY][squareX]);
 						selection[0] = squareY;
 						selection[1] = squareX;
+
+						// set legal rectangle positions
+						string from = to_string(selection[0]) + to_string(selection[1]);
+						bool castling[4];
+						string enpassant = "";
+						WaitForSingleObject(p->mutex, INFINITE);
+						memcpy(castling, p->castling, 4 * sizeof(bool));
+						enpassant = p->enpassant;
+						ReleaseMutex(p->mutex);
+						vector<string> legalMoves = helper::getLegalMoves(board, true, castling, enpassant, true)[from];
+
+						for(int i = 0; i < legalMoves.size(); i++)
+						{
+							int legalY = legalMoves[i][0] - 48;
+							int legalX = legalMoves[i][1] - 48;
+							legalRectangles[i].setPosition(squarePos[legalY][legalX]);
+						}
 					}
 
 					// attempt to move the players piece if selection string is full
 					else
 					{
 						bool validMove = true;
+						bool sameSquareSelected = false;
 
 						// if the target square is the same as the selection square, then deselect
 						if (selection[0] == targetSquare[0] && selection[1] == targetSquare[1])
 						{
+							sameSquareSelected = true;
 							validMove = false;
+							((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+							for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
+							selection[0] = -1;
 						}
 
 						// check if the target square is a legal move for the selected piece
@@ -545,25 +612,28 @@ void Window::display(LPVOID pParam)
 						
 						// deselect if not legal
 						bool castling[4];
+						string enpassant = "";
 						WaitForSingleObject(p->mutex, INFINITE);
 						memcpy(castling, p->castling, 4 * sizeof(bool));
+						enpassant = p->enpassant;
 						ReleaseMutex(p->mutex);
-						vector<string> legalMoves = helper::getLegalMoves(board, true, castling, true)[from];
+						vector<string> legalMoves = helper::getLegalMoves(board, true, castling, enpassant, true)[from];
 						if (find(legalMoves.begin(), legalMoves.end(), to) == legalMoves.end())
 						{
 							validMove = false;
+							((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+							for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
+							selection[0] = -1;
 						}
 
 						if (validMove)
 						{
-							// check for special moves (castling, promotion, en passant)
+							// check for castling
 							// 0 == normal move
 							// 1 == white castles kingside
 							// 2 == white castles queenside
 							// 3 == black castles kingside
 							// 4 == black castles queenside
-							// 5 == promotion (destination square in legal moves formatted like "e8=Q")
-							// 6 == en passant
 
 							int moveType = 0;
 							if (from == "74" && to == "76") { moveType = 1; }
@@ -576,9 +646,43 @@ void Window::display(LPVOID pParam)
 							{
 							case 0:
 							{
+								char targetPrev = board[targetSquare[0]][targetSquare[1]];
 								char movedPiece = board[selection[0]][selection[1]];
 								board[selection[0]][selection[1]] = ' ';
 								board[targetSquare[0]][targetSquare[1]] = movedPiece;
+
+								// if a pawn is on a promoting square, then replace it with a queen
+								for (int x = 0; x < 8; x++)
+								{
+									if (board[0][x] == 'P') { board[0][x] = 'Q'; }
+									if (board[7][x] == 'p') { board[7][x] = 'q'; }
+								}
+
+								// if a pawn moved forward two squares, then set an en passant square
+								// otherwise, clear the en passant square
+								if (board[targetSquare[0]][targetSquare[1]] == 'P' && selection[0] - targetSquare[0] == 2)
+								{
+									enpassant = to_string(targetSquare[0] + 1) + to_string(targetSquare[1]);
+								}
+								else if (board[targetSquare[0]][targetSquare[1]] == 'p' && selection[0] - targetSquare[0] == -2)
+								{
+									enpassant = to_string(targetSquare[0] - 1) + to_string(targetSquare[1]);
+								}
+								else
+								{
+									enpassant = "";
+								}
+
+								// if a pawn moved to an empty square, then clear the square behind it (to handle en passant captures)
+								if (board[targetSquare[0]][targetSquare[1]] == 'P' && targetPrev == ' ')
+								{
+									board[targetSquare[0] + 1][targetSquare[1]] = ' ';
+								}
+								if (board[targetSquare[0]][targetSquare[1]] == 'p' && targetPrev == ' ')
+								{
+									board[targetSquare[0] - 1][targetSquare[1]] = ' ';
+								}
+
 								break;
 							}
 							case 1:
@@ -627,14 +731,46 @@ void Window::display(LPVOID pParam)
 
 							WaitForSingleObject(p->mutex, INFINITE);
 							memcpy(p->castling, castling, 4 * sizeof(bool));
+							p->enpassant = enpassant;
 							ReleaseMutex(p->mutex);
+
+							// clear selection and legal rectangles
+							((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+							for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
+							selection[0] = -1;
 
 							// indicate that it is the engine's turn
 							madeMove = true;
 						}
 
-						((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
-						selection[0] = -1;
+						// if the move is invalid (i.e. not castled) and a different player piece was clicked
+						// then move the selection square to that piece
+						if (!validMove && board[targetSquare[0]][targetSquare[1]] >= 65 && board[targetSquare[0]][targetSquare[1]] <= 90 && !sameSquareSelected)
+						{
+							((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(squarePos[squareY][squareX]);
+							selection[0] = squareY;
+							selection[1] = squareX;
+
+							// clear and set legal rectangle positions
+							for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
+
+							string from = to_string(selection[0]) + to_string(selection[1]);
+							bool castling[4];
+							string enpassant = "";
+							WaitForSingleObject(p->mutex, INFINITE);
+							memcpy(castling, p->castling, 4 * sizeof(bool));
+							enpassant = p->enpassant;
+							ReleaseMutex(p->mutex);
+							vector<string> legalMoves = helper::getLegalMoves(board, true, castling, enpassant, true)[from];
+
+							for (int i = 0; i < legalMoves.size(); i++)
+							{
+								int legalY = legalMoves[i][0] - 48;
+								int legalX = legalMoves[i][1] - 48;
+								legalRectangles[i].setPosition(squarePos[legalY][legalX]);
+							}
+						}
+
 					}
 				}
 
@@ -642,6 +778,7 @@ void Window::display(LPVOID pParam)
 				else if(!clickedInBoard)
 				{
 					((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+					for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
 					selection[0] = -1;
 				}
 

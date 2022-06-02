@@ -49,13 +49,15 @@ UINT Engine::start(LPVOID pParam)
 		string to = "";
 
 		bool castling[4];
+		string enpassant = "";
 		WaitForSingleObject(p->mutex, INFINITE);
 		memcpy(castling, p->castling, 4 * sizeof(bool));
+		enpassant = p->enpassant;
 		ReleaseMutex(p->mutex);
 
-		clock_t legalMovesStart = clock();
-		map<string, vector<string>> legalMoves = helper::getLegalMoves(board, false, castling, false);
-		clock_t legalMovesEnd = clock();
+		auto begin = std::chrono::high_resolution_clock::now();
+		map<string, vector<string>> legalMoves = helper::getLegalMoves(board, false, castling, enpassant, false);
+		auto end = std::chrono::high_resolution_clock::now();
 
 		if (dpr)
 		{
@@ -82,7 +84,7 @@ UINT Engine::start(LPVOID pParam)
 			}
 			cout << endl;
 
-			cout << "legal moves found in " << 1000.0 * (legalMovesEnd - legalMovesStart) / CLOCKS_PER_SEC << " ms\n" << endl;
+			printf("legal moves found in %.3f ms\n", float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
 		}
 
 		// if an enemy piece is capturable, then capture the most valuable
@@ -151,9 +153,43 @@ UINT Engine::start(LPVOID pParam)
 		{
 		case 0:
 		{
+			char toPrev = board[to[0] - 48][to[1] - 48];
 			char movedPiece = board[from[0] - 48][from[1] - 48];
 			board[from[0] - 48][from[1] - 48] = ' ';
 			board[to[0] - 48][to[1] - 48] = movedPiece;
+
+			// if a pawn is on a promoting square, then replace it with a queen
+			for (int x = 0; x < 8; x++)
+			{
+				if (board[0][x] == 'P') { board[0][x] = 'Q'; }
+				if (board[7][x] == 'p') { board[7][x] = 'q'; }
+			}
+
+			// if a pawn moved forward two squares, then set an en passant square
+			// otherwise, clear the en passant square
+			if (board[to[0] - 48][to[1] - 48] == 'P' && (from[0] - 48) - (to[0] - 48) == 2)
+			{
+				enpassant = to_string(to[0] - 48 + 1) + to_string(to[1] - 48);
+			}
+			else if (board[to[0] - 48][to[1] - 48] == 'p' && (from[0] - 48) - (to[0] - 48) == -2)
+			{
+				enpassant = to_string(to[0] - 48 - 1) + to_string(to[1] - 48);
+			}
+			else
+			{
+				enpassant = "";
+			}
+
+			// if a pawn moved to an empty square, then clear the square behind it (to handle en passant captures)
+			if (board[to[0] - 48][to[1] - 48] == 'P' && toPrev == ' ')
+			{
+				board[to[0] - 48 + 1][to[1] - 48] = ' ';
+			}
+			if (board[to[0] - 48][to[1] - 48] == 'p' && toPrev == ' ')
+			{
+				board[to[0] - 48 - 1][to[1] - 48] = ' ';
+			}
+
 			break;
 		}
 		case 1:
@@ -202,6 +238,7 @@ UINT Engine::start(LPVOID pParam)
 
 		WaitForSingleObject(p->mutex, INFINITE);
 		memcpy(p->castling, castling, 4 * sizeof(bool));
+		p->enpassant = enpassant;
 		ReleaseMutex(p->mutex);
 
 		if (dpr)

@@ -25,6 +25,8 @@ public:
 	// {white kingside allowed, white queenside allowed, black kingside allowed, black queenside allowed}
 	bool castling[4] = { true, true, true, true };
 
+	string enpassant = "";
+
 	bool windowClosed = false;
 };
 

@@ -1,5 +1,6 @@
 #include "helper.h"
 
+
 // source: https://www.geeksforgeeks.org/how-to-split-a-string-in-cc-python-and-java/
 vector<string> helper::splitToVector(string str, char del)
 {
@@ -60,7 +61,7 @@ void helper::fenToMatrix(string fen, char matrix[8][8])
 	}
 }
 
-map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteToMove, bool castling[4], bool playerCheckDetection)
+map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteToMove, bool castling[4], string enpassant, bool playerCheckDetection)
 {
 	// load the legal moves; white to move
 	map<string, vector<string>> legalMoves;
@@ -79,14 +80,22 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 				{
 				case 'P':
 				{
-					// promotion; implement later
+					// promotion, handled by window/engine
 					if (i == 0) { break; }
 
+					int enpassantY = -1;
+					int enpassantX = -1;
+					if (enpassant.length() > 0)
+					{
+						enpassantY = enpassant[0] - 48;
+						enpassantX = enpassant[1] - 48;
+					}
+
 					// capture left
-					if (j > 0 && board[i - 1][j - 1] >= 97) { pieceMoves.push_back(to_string(i - 1) + to_string(j - 1)); }
+					if (j > 0 && (board[i - 1][j - 1] >= 97 || (i - 1 == enpassantY && j - 1 == enpassantX))) { pieceMoves.push_back(to_string(i - 1) + to_string(j - 1)); }
 
 					// capture right
-					if (j < 7 && board[i - 1][j + 1] >= 97) { pieceMoves.push_back(to_string(i - 1) + to_string(j + 1)); }
+					if (j < 7 && (board[i - 1][j + 1] >= 97 || (i - 1 == enpassantY && j + 1 == enpassantX))) { pieceMoves.push_back(to_string(i - 1) + to_string(j + 1)); }
 
 					// move two squares
 					if (i == 6 && board[i - 1][j] == ' ' && board[i - 2][j] == ' ') { pieceMoves.push_back(to_string(i - 2) + to_string(j)); }
@@ -415,14 +424,22 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 				{
 				case 'p':
 				{
-					// promotion; implement later
+					// promotion, handled by window/engine
 					if (i == 7) { break; }
 
+					int enpassantY = -1;
+					int enpassantX = -1;
+					if (enpassant.length() > 0)
+					{
+						enpassantY = enpassant[0] - 48;
+						enpassantX = enpassant[1] - 48;
+					}
+
 					// capture left
-					if (j > 0 && board[i + 1][j - 1] >= 65 && board[i + 1][j - 1] <= 90) { pieceMoves.push_back(to_string(i + 1) + to_string(j - 1)); }
+					if (j > 0 && ((board[i + 1][j - 1] >= 65 && board[i + 1][j - 1] <= 90) || (i + 1 == enpassantY && j - 1 == enpassantX))) { pieceMoves.push_back(to_string(i + 1) + to_string(j - 1)); }
 
 					// capture right
-					if (j < 7 && board[i + 1][j + 1] >= 65 && board[i + 1][j + 1] <= 90) { pieceMoves.push_back(to_string(i + 1) + to_string(j + 1)); }
+					if (j < 7 && ((board[i + 1][j + 1] >= 65 && board[i + 1][j + 1] <= 90) || (i + 1 == enpassantY && j + 1 == enpassantX))) { pieceMoves.push_back(to_string(i + 1) + to_string(j + 1)); }
 
 					// move two squares
 					if (i == 1 && board[i + 1][j] == ' ' && board[i + 2][j] == ' ') { pieceMoves.push_back(to_string(i + 2) + to_string(j)); }
@@ -753,9 +770,50 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 		}
 	}
 
+	// if castling is legal, then add additional squares for putting king in check
+	map<string, vector<string>> castlingExtra;
+	for (auto move : legalMoves)
+	{
+		if (move.first != "74" && move.first != "04") { continue; }
+
+		vector<string> pieceExtra;
+		for (int iter = 0; iter < move.second.size(); iter++)
+		{
+			string from = move.first;
+			string to = move.second[iter];
+
+			if (from == "74" && to == "76" || from == "74" && to == "72")
+			{
+				vector<string> pieceMoves = move.second;
+				pieceMoves.push_back("74");
+				legalMoves[move.first] = pieceMoves;
+				break;
+			}
+
+			if (from == "04" && to == "06" || from == "04" && to == "02")
+			{
+				vector<string> pieceMoves = move.second;
+				pieceMoves.push_back("04");
+				legalMoves[move.first] = pieceMoves;
+				break;
+			}
+		}
+	}
+
+	// load illegal moves from legal moves
 	map<string, vector<string>> illegalMoves;
 	for (auto move : legalMoves)
 	{
+		// for the engine, skip illegal move detection unless it wants to castle
+		bool skip = false;
+		if (!playerCheckDetection)
+		{
+			skip = true;
+			if (move.first == "04" && board[0][4] == 'k') { skip = false; }
+		}
+
+		if (skip) { continue; }
+
 		vector<string> pieceIllegal;
 		for (int iter = 0; iter < move.second.size(); iter++)
 		{
@@ -806,6 +864,11 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 					int y = knightPos[k][0];
 					int x = knightPos[k][1];
 					if (y >= 0 && y <= 7 && x >= 0 && x <= 7 && tempBoard[y][x] == 'n') { pieceIllegal.push_back(to); }
+				}
+
+				if (move.second[iter] == "74")
+				{
+					cout << endl;
 				}
 
 				// bishops, rooks, queen
@@ -932,6 +995,148 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 
 			}
 
+			else // black to move
+			{
+				// pawns
+				if (j > 0 && tempBoard[i - 1][j - 1] == 'P') { pieceIllegal.push_back(to); }
+				if (j < 7 && tempBoard[i - 1][j + 1] >= 'P') { pieceIllegal.push_back(to); }
+
+				// knights
+				vector<vector<int>> knightPos;
+				knightPos.push_back({ i - 2, j - 1 }); knightPos.push_back({ i - 2, j + 1 });
+				knightPos.push_back({ i - 1, j - 2 }); knightPos.push_back({ i - 1, j + 2 });
+				knightPos.push_back({ i + 1, j - 2 }); knightPos.push_back({ i + 1, j + 2 });
+				knightPos.push_back({ i + 2, j - 1 }); knightPos.push_back({ i + 2, j + 1 });
+				for (int k = 0; k < knightPos.size(); k++)
+				{
+					int y = knightPos[k][0];
+					int x = knightPos[k][1];
+					if (y >= 0 && y <= 7 && x >= 0 && x <= 7 && tempBoard[y][x] == 'N') { pieceIllegal.push_back(to); }
+				}
+
+				// bishops, rooks, queen
+#pragma region
+				// top left
+				int y = i - 1;
+				int x = j - 1;
+				while (y >= 0 && x >= 0 && (tempBoard[y][x] == ' ' || tempBoard[y][x] == 'B' || tempBoard[y][x] == 'Q'))
+				{
+					if (tempBoard[y][x] == 'B' || tempBoard[y][x] == 'Q') { pieceIllegal.push_back(to); break; }
+					y--;
+					x--;
+				}
+
+				// top right
+				y = i - 1;
+				x = j + 1;
+				while (y >= 0 && x <= 7 && (tempBoard[y][x] == ' ' || tempBoard[y][x] == 'B' || tempBoard[y][x] == 'Q'))
+				{
+					if (tempBoard[y][x] == 'B' || tempBoard[y][x] == 'Q') { pieceIllegal.push_back(to); break; }
+					y--;
+					x++;
+				}
+
+				// bottom left
+				y = i + 1;
+				x = j - 1;
+				while (y <= 7 && x >= 0 && (tempBoard[y][x] == ' ' || tempBoard[y][x] == 'B' || tempBoard[y][x] == 'Q'))
+				{
+					if (tempBoard[y][x] == 'B' || tempBoard[y][x] == 'Q') { pieceIllegal.push_back(to); break; }
+					y++;
+					x--;
+				}
+
+				// bottom right
+				y = i + 1;
+				x = j + 1;
+				while (y <= 7 && x <= 7 && (tempBoard[y][x] == ' ' || tempBoard[y][x] == 'B' || tempBoard[y][x] == 'Q'))
+				{
+					if (tempBoard[y][x] == 'B' || tempBoard[y][x] == 'Q') { pieceIllegal.push_back(to); break; }
+					y++;
+					x++;
+				}
+
+				// top
+				y = i - 1;
+				x = j;
+				while (y >= 0 && (tempBoard[y][x] == ' ' || tempBoard[y][x] == 'R' || tempBoard[y][x] == 'Q'))
+				{
+					if (tempBoard[y][x] == 'R' || tempBoard[y][x] == 'Q') { pieceIllegal.push_back(to); break; }
+					y--;
+				}
+
+				// left
+				y = i;
+				x = j - 1;
+				while (x >= 0 && (tempBoard[y][x] == ' ' || tempBoard[y][x] == 'R' || tempBoard[y][x] == 'Q'))
+				{
+					if (tempBoard[y][x] == 'R' || tempBoard[y][x] == 'Q') { pieceIllegal.push_back(to); break; }
+					x--;
+				}
+
+				// right
+				y = i;
+				x = j + 1;
+				while (x <= 7 && (tempBoard[y][x] == ' ' || tempBoard[y][x] == 'R' || tempBoard[y][x] == 'Q'))
+				{
+					if (tempBoard[y][x] == 'R' || tempBoard[y][x] == 'Q') { pieceIllegal.push_back(to); break; }
+					x++;
+				}
+
+				// bottom
+				y = i + 1;
+				x = j;
+				while (y <= 7 && (tempBoard[y][x] == ' ' || tempBoard[y][x] == 'R' || tempBoard[y][x] == 'Q'))
+				{
+					if (tempBoard[y][x] == 'R' || tempBoard[y][x] == 'Q') { pieceIllegal.push_back(to); break; }
+					y++;
+				}
+#pragma endregion
+
+				// king
+#pragma region
+				// top left
+				y = i - 1;
+				x = j - 1;
+				if (y >= 0 && x >= 0 && (tempBoard[y][x] == 'K')) { pieceIllegal.push_back(to); }
+
+				// top
+				y = i - 1;
+				x = j;
+				if (y >= 0 && (tempBoard[y][x] == 'K')) { pieceIllegal.push_back(to); }
+
+				// top right
+				y = i - 1;
+				x = j + 1;
+				if (y >= 0 && x <= 7 && (tempBoard[y][x] == 'K')) { pieceIllegal.push_back(to); }
+
+				// left
+				y = i;
+				x = j - 1;
+				if (x >= 0 && (tempBoard[y][x] == 'K')) { pieceIllegal.push_back(to); }
+
+				// right
+				y = i;
+				x = j + 1;
+				if (x <= 7 && (tempBoard[y][x] == 'K')) { pieceIllegal.push_back(to); }
+
+				// bottom left
+				y = i + 1;
+				x = j - 1;
+				if (y <= 7 && x >= 0 && (tempBoard[y][x] == 'K')) { pieceIllegal.push_back(to); }
+
+				// bottom
+				y = i + 1;
+				x = j;
+				if (y <= 7 && (tempBoard[y][x] == 'K')) { pieceIllegal.push_back(to); }
+
+				// bottom right
+				y = i + 1;
+				x = j + 1;
+				if (y <= 7 && x <= 7 && (tempBoard[y][x] == 'K')) { pieceIllegal.push_back(to); }
+#pragma endregion
+
+			}
 		}
 
 		if (pieceIllegal.size() > 0)
@@ -940,13 +1145,53 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 		}
 	}
 
+	// find instances of illegal castling (e.g. if castles from 74 to 76, and 74/75 is under attack)
+	// (load the illegalCastling vector)
+	vector<string> illegalCastling;
+	vector<string> illegalToDelete;
+	for (auto move : illegalMoves)
+	{
+		if (move.first != "74" && move.first != "04") { continue; }
+
+		vector<string> pieceExtra;
+		for (int iter = 0; iter < move.second.size(); iter++)
+		{
+			string from = move.first;
+			string to = move.second[iter];
+
+			if (from == "74" && to == "74") { illegalCastling.push_back("76"); illegalCastling.push_back("72"); }
+			if (from == "74" && to == "75") { illegalCastling.push_back("76"); }
+			if (from == "74" && to == "73") { illegalCastling.push_back("72"); }
+
+			if (from == "04" && to == "04") { illegalCastling.push_back("06"); illegalCastling.push_back("02"); }
+			if (from == "04" && to == "05") { illegalCastling.push_back("06"); }
+			if (from == "04" && to == "03") { illegalCastling.push_back("02"); }
+
+		}
+	}
+
+	// remove additional squares from castling in legalMoves (e.g. 74 to 74)
+	for (auto move : legalMoves)
+	{
+		if (move.first != "74" && move.first != "04") { continue; }
+
+		if (find(move.second.begin(), move.second.end(), move.first) != move.second.end())
+		{
+			vector<string> pieceMoves = move.second;
+			pieceMoves.erase(remove(pieceMoves.begin(), pieceMoves.end(), move.first), pieceMoves.end());
+			legalMoves[move.first] = pieceMoves;
+		}
+	}
+
+	// remove illegal moves from legalMoves
 	for (auto move : illegalMoves)
 	{
 		vector<string> newLegal;
 		vector<string> oldLegal = legalMoves[move.first];
 		for (int i = 0; i < oldLegal.size(); i++)
 		{
-			if (find(move.second.begin(), move.second.end(), oldLegal[i]) == move.second.end())
+			if (find(move.second.begin(), move.second.end(), oldLegal[i]) == move.second.end() &&
+				find(illegalCastling.begin(), illegalCastling.end(), oldLegal[i]) == illegalCastling.end())
 			{
 				newLegal.push_back(oldLegal[i]);
 			}
@@ -974,7 +1219,7 @@ float helper::getPieceValue(char piece)
 	{
 	case 'K':
 	case 'k':
-		return 100;
+		return 10000;
 
 	case 'Q':
 	case 'q':
