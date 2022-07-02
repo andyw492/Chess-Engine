@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "position.h"
+
 using std::vector;
 using std::string;
 using std::to_string;
@@ -23,9 +25,9 @@ namespace helper
 
 	void fenToMatrix(string fen, char matrix[8][8]);
 
-	map<string, vector<string>> getLegalMoves(char board[8][8], bool whiteToMove, bool castling[4], string enpassant, bool playerCheckDetection);
+	Position getNewPosition(Position before, string from, string to);
 
-	float getPieceValue(char piece);
+	map<string, vector<string>> getLegalMoves(Position position, bool whiteToMove);
 }
 
 #endif

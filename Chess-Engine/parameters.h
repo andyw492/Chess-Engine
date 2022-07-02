@@ -5,29 +5,33 @@
 #include <windows.h>
 #include <iostream>
 
+#include "position.h"
+
 using std::string;
 
-// this class is passed to all threads, acts as shared memory
-class Parameters {
+class Parameters
+{
 public:
 	HANDLE	mutex;
 	HANDLE	finished;
 	HANDLE	eventQuit;
 
-	bool windowPrint = false;
-	bool enginePrint = false;
+	bool windowClosed = false;
 
 	string initialFen = "";
 
 	bool playerToMove = true;
-	char board[8][8];
+	Position currentPosition;
 
-	// {white kingside allowed, white queenside allowed, black kingside allowed, black queenside allowed}
-	bool castling[4] = { true, true, true, true };
+	char* toEvaluate = nullptr;
+	char* evaluated = nullptr;
 
-	string enpassant = "";
+	int maxDepth = 0;
+	string bestMove = "";
 
-	bool windowClosed = false;
+	bool windowPrint = false;
+	bool enginePrint = false;
+	bool evaluatorPrint = false;
 };
 
 #endif

@@ -1,18 +1,13 @@
-#ifndef engine_h
-#define engine_h
+#ifndef evaluator_h
+#define evaluator_h
 
 #define NOMINMAX
 #include <windows.h>
 #include <stdio.h>
 #include <iostream>
 #include <string>
-#include <vector>
-#include <map>
-#include <iterator>
-#include <cstdlib>
-#include <algorithm>
-#include <ctime>
 #include <chrono>
+#include <algorithm>
 
 #include "parameters.h"
 #include "helper.h"
@@ -21,18 +16,14 @@
 using std::cout;
 using std::endl;
 using std::string;
-using std::vector;
-using std::map;
-using std::iterator;
-using std::max;
-using std::clock_t;
 using std::min;
+using std::max;
 
-class Engine
+class Evaluator
 {
 public:
 
-	Engine(bool enginePrint);
+	Evaluator(bool evaluatorPrint);
 
 	UINT start(LPVOID pParam);
 

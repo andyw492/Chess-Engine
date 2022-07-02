@@ -328,7 +328,7 @@ void Window::display(LPVOID pParam)
 	helper::fenToMatrix(initialFen, board);
 
 	WaitForSingleObject(p->mutex, INFINITE);
-	memcpy(p->board, board, 64 * sizeof(char));
+	memcpy(p->currentPosition.board, board, 64 * sizeof(char));
 	ReleaseMutex(p->mutex);
 
 	initializeObjects(pParam, board);
@@ -378,7 +378,7 @@ void Window::display(LPVOID pParam)
 		// draw the current board's objects to window
 #pragma region
 		WaitForSingleObject(p->mutex, INFINITE);
-		memcpy(board, p->board, 64 * sizeof(char));
+		memcpy(board, p->currentPosition.board, 64 * sizeof(char));
 		ReleaseMutex(p->mutex);
 
 		piecesToDraw = setPiecePositions(board);
@@ -492,12 +492,13 @@ void Window::display(LPVOID pParam)
 					bool castling[4];
 					string enpassant = "";
 					WaitForSingleObject(p->mutex, INFINITE);
-					memcpy(castling, p->castling, 4 * sizeof(bool));
-					enpassant = p->enpassant;
+					Position position = p->currentPosition;
+					memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
+					enpassant = p->currentPosition.enpassant;
 					ReleaseMutex(p->mutex);
 
 					auto begin = std::chrono::high_resolution_clock::now();
-					map<string, vector<string>> legalMoves = helper::getLegalMoves(board, true, castling, enpassant, true);
+					map<string, vector<string>> legalMoves = helper::getLegalMoves(position, true);
 					auto end = std::chrono::high_resolution_clock::now();
 
 					cout << "----------------- WINDOW -----------------\n" << endl;
@@ -553,7 +554,7 @@ void Window::display(LPVOID pParam)
 				{
 					// get the current board from parameters
 					WaitForSingleObject(p->mutex, INFINITE);
-					memcpy(board, p->board, 64 * sizeof(char));
+					memcpy(board, p->currentPosition.board, 64 * sizeof(char));
 					ReleaseMutex(p->mutex);
 
 					int targetSquare[2];
@@ -577,10 +578,11 @@ void Window::display(LPVOID pParam)
 						bool castling[4];
 						string enpassant = "";
 						WaitForSingleObject(p->mutex, INFINITE);
-						memcpy(castling, p->castling, 4 * sizeof(bool));
-						enpassant = p->enpassant;
+						Position position = p->currentPosition;
+						memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
+						enpassant = p->currentPosition.enpassant;
 						ReleaseMutex(p->mutex);
-						vector<string> legalMoves = helper::getLegalMoves(board, true, castling, enpassant, true)[from];
+						vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
 
 						for(int i = 0; i < legalMoves.size(); i++)
 						{
@@ -614,10 +616,11 @@ void Window::display(LPVOID pParam)
 						bool castling[4];
 						string enpassant = "";
 						WaitForSingleObject(p->mutex, INFINITE);
-						memcpy(castling, p->castling, 4 * sizeof(bool));
-						enpassant = p->enpassant;
+						memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
+						Position position = p->currentPosition;
+						enpassant = p->currentPosition.enpassant;
 						ReleaseMutex(p->mutex);
-						vector<string> legalMoves = helper::getLegalMoves(board, true, castling, enpassant, true)[from];
+						vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
 						if (find(legalMoves.begin(), legalMoves.end(), to) == legalMoves.end())
 						{
 							validMove = false;
@@ -720,7 +723,7 @@ void Window::display(LPVOID pParam)
 							}
 
 							WaitForSingleObject(p->mutex, INFINITE);
-							memcpy(p->board, board, 64 * sizeof(char));
+							memcpy(p->currentPosition.board, board, 64 * sizeof(char));
 							ReleaseMutex(p->mutex);
 
 							// modify castling permissions and send to parameters
@@ -730,8 +733,8 @@ void Window::display(LPVOID pParam)
 							if (from == "04" || from == "00") { castling[3] = false; }
 
 							WaitForSingleObject(p->mutex, INFINITE);
-							memcpy(p->castling, castling, 4 * sizeof(bool));
-							p->enpassant = enpassant;
+							memcpy(p->currentPosition.castling, castling, 4 * sizeof(bool));
+							p->currentPosition.enpassant = enpassant;
 							ReleaseMutex(p->mutex);
 
 							// clear selection and legal rectangles
@@ -758,10 +761,11 @@ void Window::display(LPVOID pParam)
 							bool castling[4];
 							string enpassant = "";
 							WaitForSingleObject(p->mutex, INFINITE);
-							memcpy(castling, p->castling, 4 * sizeof(bool));
-							enpassant = p->enpassant;
+							memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
+							Position position = p->currentPosition;
+							enpassant = p->currentPosition.enpassant;
 							ReleaseMutex(p->mutex);
-							vector<string> legalMoves = helper::getLegalMoves(board, true, castling, enpassant, true)[from];
+							vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
 
 							for (int i = 0; i < legalMoves.size(); i++)
 							{
@@ -784,7 +788,7 @@ void Window::display(LPVOID pParam)
 
 				char printBoard[8][8];
 				WaitForSingleObject(p->mutex, INFINITE);
-				memcpy(printBoard, p->board, 64 * sizeof(char));
+				memcpy(printBoard, p->currentPosition.board, 64 * sizeof(char));
 				ReleaseMutex(p->mutex);
 
 				if (dpr && madeMove)

@@ -22,11 +22,7 @@ UINT Engine::start(LPVOID pParam)
 		WaitForSingleObject(p->mutex, INFINITE);
 		windowClosed = p->windowClosed;
 		ReleaseMutex(p->mutex);
-
-		if (windowClosed)
-		{
-			break;
-		}
+		if (windowClosed) { break; }
 
 		// check if engine's turn
 		bool engineToMove = false;
@@ -39,40 +35,25 @@ UINT Engine::start(LPVOID pParam)
 			continue;
 		}
 		
-		// get the current board from parameters
-		char board[8][8];
+		// get info from parameters
+		int maxDepth = 0;
+		Position currentPosition;
+
 		WaitForSingleObject(p->mutex, INFINITE);
-		memcpy(board, p->board, 64 * sizeof(char));
+		maxDepth = p->maxDepth;
+		currentPosition = p->currentPosition;
 		ReleaseMutex(p->mutex);
 
-		string from = "";
-		string to = "";
+		PositionNode* root = new PositionNode;
+		root->position = currentPosition;
+		root->min = true;
+		root->value = FLT_MAX;
+		PositionNode* currentNode = root;
 
-		bool castling[4];
-		string enpassant = "";
-		WaitForSingleObject(p->mutex, INFINITE);
-		memcpy(castling, p->castling, 4 * sizeof(bool));
-		enpassant = p->enpassant;
-		ReleaseMutex(p->mutex);
-
-		auto begin = std::chrono::high_resolution_clock::now();
-		map<string, vector<string>> legalMoves = helper::getLegalMoves(board, false, castling, enpassant, false);
-		auto end = std::chrono::high_resolution_clock::now();
-
+		map<string, vector<string>> legalMoves = helper::getLegalMoves(root->position, false);
 		if (dpr)
 		{
 			cout << "----------------- ENGINE -----------------\n" << endl;
-
-			for (int y = 0; y < 8; y++)
-			{
-				for (int x = 0; x < 8; x++)
-				{
-					cout << board[y][x] << " ";
-				}
-				cout << endl;
-			}
-			cout << endl;
-
 			for (auto i : legalMoves)
 			{
 				cout << i.first << ": ";
@@ -83,176 +64,153 @@ UINT Engine::start(LPVOID pParam)
 				cout << endl;
 			}
 			cout << endl;
-
-			printf("legal moves found in %.3f ms\n", float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
 		}
 
-		// if an enemy piece is capturable, then capture the most valuable
-		// (king > queen > rook > bishop > knight > pawn)
-		float maxValue = 0;
-		for (auto i : legalMoves)
-		{
-			for (int j = 0; j < i.second.size(); j++)
-			{
-				int y = i.second[j][0] - 48;
-				int x = i.second[j][1] - 48;
 
-				// can't capture own piece
-				if (board[y][x] >= 97 || board[y][x] == ' ')
+		Position bestPosition;
+
+		// find the resulting position from the best move
+		// pseudocode: https://pastebin.com/MNrCY7eu
+		while (true)
+		{
+			// check if window is still open
+			bool windowClosed = false;
+			WaitForSingleObject(p->mutex, INFINITE);
+			windowClosed = p->windowClosed;
+			ReleaseMutex(p->mutex);
+			if (windowClosed) { break; }
+
+			bool allEvaluated = true;
+
+			if (currentNode->children.size() == 0)
+			{
+				allEvaluated = false;
+			}
+			for (int i = 0; i < currentNode->children.size(); i++)
+			{
+				if (!currentNode->children[i]->evaluated) { allEvaluated = false; }
+			}
+
+			if (currentNode->depth == 0 && allEvaluated)
+			{
+				float minValue = FLT_MAX;
+				for (int i = 0; i < currentNode->children.size(); i++)
 				{
-					continue;
+					if (currentNode->children[i]->value < minValue)
+					{
+						bestPosition = currentNode->children[i]->position;
+						minValue = currentNode->children[i]->value;
+					}
 				}
 
-				int pieceValue = helper::getPieceValue(board[y][x]);
+				break;
+			}
 
-				if (dpr)
+			while (currentNode->children.size() == 0 || !allEvaluated)
+			{
+				if (currentNode->children.size() == 0)
 				{
-					cout << "y " << y << " x " << x << " piece value " << pieceValue << endl;
+					if (dpr)
+					{
+						cout << "\ndepth " << currentNode->depth << " board, creating children" << endl;
+						for (int i = 0; i < 8; i++)
+						{
+							for (int j = 0; j < 8; j++)
+							{
+								cout << currentNode->position.board[i][j] << " ";
+							}
+							cout << endl;
+						}
+					}
+
+					Position position = currentNode->position;
+					map<string, vector<string>> legalMoves = helper::getLegalMoves(position, !currentNode->min);
+					for (auto move : legalMoves)
+					{
+						for (int i = 0; i < move.second.size(); i++)
+						{
+							PositionNode* newNode = new PositionNode;
+							newNode->depth = currentNode->depth + 1;
+							newNode->position = helper::getNewPosition(position, move.first, move.second[i]);
+							newNode->min = !(currentNode->min);
+							newNode->value = (newNode->min ? FLT_MAX : -FLT_MAX);
+							newNode->parent = currentNode;
+
+							newNode->prevMove = move.first + " -> " + move.second[i];
+
+							currentNode->children.push_back(newNode);
+						}
+					}
 				}
 
-				if (pieceValue > maxValue)
+				for (int i = 0; i < currentNode->children.size(); i++)
 				{
-					maxValue = pieceValue;
-					from = i.first;
-					to = i.second[j];
+					if (!currentNode->children[i]->evaluated) { currentNode = currentNode->children[i]; break; }
+				}
+
+				if (currentNode->depth == maxDepth - 1)
+				{
+					WaitForSingleObject(p->mutex, INFINITE);
+					p->toEvaluate = (char*)currentNode;
+					p->evaluated = nullptr;
+					ReleaseMutex(p->mutex);
+
+					// wait for current node to evaluate
+					bool evaluated = false;
+					while (!evaluated)
+					{
+						// check if window is still open
+						bool windowClosed = false;
+						WaitForSingleObject(p->mutex, INFINITE);
+						windowClosed = p->windowClosed;
+						ReleaseMutex(p->mutex);
+						if (windowClosed) { break; }
+
+						WaitForSingleObject(p->mutex, INFINITE);
+						evaluated = (p->evaluated != nullptr);
+						ReleaseMutex(p->mutex);
+					}
+
+					float value = 0;
+					WaitForSingleObject(p->mutex, INFINITE);
+					value = ((PositionNode*)p->evaluated)->value;
+					ReleaseMutex(p->mutex);
+
+					currentNode->value = value;
+					currentNode->evaluated = true;
+
+					if (dpr)
+					{
+						//cout << "current node evaluated to " << value << endl;
+					}
+
+					break;
 				}
 			}
-		}
 
-		// if no piece is capturable, choose a random move
-		if (from == "")
-		{
-			map<string, vector<string>>::iterator it = legalMoves.begin();
-			std::advance(it, rand() % legalMoves.size());
-			from = it->first;
-			to = legalMoves[from][rand() % legalMoves[from].size()];
-		}
+			float currentValue = currentNode->value;
+			float parentValue = currentNode->parent->value;
+			currentNode->parent->value = (currentNode->parent->min ? min(currentValue, parentValue) : max(currentValue, parentValue));
 
-		if (dpr)
-		{
-			//cout << "engine from " << from << " to " << to << endl;
-		}
-
-		// check for special moves (castling, promotion, en passant)
-		// 0 == normal move
-		// 1 == white castles kingside
-		// 2 == white castles queenside
-		// 3 == black castles kingside
-		// 4 == black castles queenside
-		// 5 == promotion (destination square in legal moves formatted like "e8=Q")
-		// 6 == en passant
-
-		int moveType = 0;
-		if (from == "74" && to == "76") { moveType = 1; }
-		if (from == "74" && to == "72") { moveType = 2; }
-		if (from == "04" && to == "06") { moveType = 3; }
-		if (from == "04" && to == "02") { moveType = 4; }
-
-		// modify the board and send to parameters
-		switch (moveType)
-		{
-		case 0:
-		{
-			char toPrev = board[to[0] - 48][to[1] - 48];
-			char movedPiece = board[from[0] - 48][from[1] - 48];
-			board[from[0] - 48][from[1] - 48] = ' ';
-			board[to[0] - 48][to[1] - 48] = movedPiece;
-
-			// if a pawn is on a promoting square, then replace it with a queen
-			for (int x = 0; x < 8; x++)
+			if (dpr)
 			{
-				if (board[0][x] == 'P') { board[0][x] = 'Q'; }
-				if (board[7][x] == 'p') { board[7][x] = 'q'; }
+				if (parentValue != currentNode->parent->value)
+				{
+					string s = (currentNode->parent->min ? "min" : "max");
+					cout << s << " parent at depth=" << currentNode->parent->depth << " value updated from " << parentValue << " to " << currentNode->parent->value << endl;
+				}
 			}
 
-			// if a pawn moved forward two squares, then set an en passant square
-			// otherwise, clear the en passant square
-			if (board[to[0] - 48][to[1] - 48] == 'P' && (from[0] - 48) - (to[0] - 48) == 2)
-			{
-				enpassant = to_string(to[0] - 48 + 1) + to_string(to[1] - 48);
-			}
-			else if (board[to[0] - 48][to[1] - 48] == 'p' && (from[0] - 48) - (to[0] - 48) == -2)
-			{
-				enpassant = to_string(to[0] - 48 - 1) + to_string(to[1] - 48);
-			}
-			else
-			{
-				enpassant = "";
-			}
-
-			// if a pawn moved to an empty square, then clear the square behind it (to handle en passant captures)
-			if (board[to[0] - 48][to[1] - 48] == 'P' && toPrev == ' ')
-			{
-				board[to[0] - 48 + 1][to[1] - 48] = ' ';
-			}
-			if (board[to[0] - 48][to[1] - 48] == 'p' && toPrev == ' ')
-			{
-				board[to[0] - 48 - 1][to[1] - 48] = ' ';
-			}
-
-			break;
+			currentNode = currentNode->parent;
+			currentNode->evaluated = true;
 		}
-		case 1:
-		{
-			board[7][4] = ' ';
-			board[7][5] = 'R';
-			board[7][6] = 'K';
-			board[7][7] = ' ';
-			break;
-		}
-		case 2:
-		{
-			board[7][0] = ' ';
-			board[7][2] = 'K';
-			board[7][3] = 'R';
-			board[7][4] = ' ';
-			break;
-		}
-		case 3:
-		{
-			board[0][4] = ' ';
-			board[0][5] = 'r';
-			board[0][6] = 'k';
-			board[0][7] = ' ';
-			break;
-		}
-		case 4:
-		{
-			board[0][0] = ' ';
-			board[0][2] = 'k';
-			board[0][3] = 'r';
-			board[0][4] = ' ';
-			break;
-		}
-		}
-
+		
+		// delete the position node tree
+		
+		// send the resulting position to parameters
 		WaitForSingleObject(p->mutex, INFINITE);
-		memcpy(p->board, board, 64 * sizeof(char));
+		p->currentPosition = bestPosition;
 		ReleaseMutex(p->mutex);
-
-		// modify castling permissions and send to parameters
-		if (from == "74" || from == "77") { castling[0] = false; }
-		if (from == "74" || from == "70") { castling[1] = false; }
-		if (from == "04" || from == "07") { castling[2] = false; }
-		if (from == "04" || from == "00") { castling[3] = false; }
-
-		WaitForSingleObject(p->mutex, INFINITE);
-		memcpy(p->castling, castling, 4 * sizeof(bool));
-		p->enpassant = enpassant;
-		ReleaseMutex(p->mutex);
-
-		if (dpr)
-		{
-			for (int i = 0; i < 8; i++)
-			{
-				for (int j = 0; j < 8; j++)
-				{
-					cout << board[i][j] << " ";
-				}
-				cout << endl;
-			}
-			cout << endl;
-		}
 
 		// indicate that it is the player's move
 		WaitForSingleObject(p->mutex, INFINITE);

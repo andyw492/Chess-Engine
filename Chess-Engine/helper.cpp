@@ -61,8 +61,129 @@ void helper::fenToMatrix(string fen, char matrix[8][8])
 	}
 }
 
-map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteToMove, bool castling[4], string enpassant, bool playerCheckDetection)
+Position helper::getNewPosition(Position before, string from, string to)
 {
+	Position newPosition;
+
+	char board[8][8];
+	memcpy(board, before.board, 64 * sizeof(char));
+
+	// check for special moves (castling, promotion, en passant)
+	// 0 == normal move
+	// 1 == white castles kingside
+	// 2 == white castles queenside
+	// 3 == black castles kingside
+	// 4 == black castles queenside
+	// 5 == promotion (destination square in legal moves formatted like "e8=Q")
+	// 6 == en passant
+
+	int moveType = 0;
+	if (from == "74" && to == "76") { moveType = 1; }
+	if (from == "74" && to == "72") { moveType = 2; }
+	if (from == "04" && to == "06") { moveType = 3; }
+	if (from == "04" && to == "02") { moveType = 4; }
+
+	// modify the board
+	switch (moveType)
+	{
+	case 0:
+	{
+		char toPrev = board[to[0] - 48][to[1] - 48];
+		char movedPiece = board[from[0] - 48][from[1] - 48];
+		board[from[0] - 48][from[1] - 48] = ' ';
+		board[to[0] - 48][to[1] - 48] = movedPiece;
+
+		// if a pawn is on a promoting square, then replace it with a queen
+		for (int x = 0; x < 8; x++)
+		{
+			if (board[0][x] == 'P') { board[0][x] = 'Q'; }
+			if (board[7][x] == 'p') { board[7][x] = 'q'; }
+		}
+
+		// if a pawn moved forward two squares, then set an en passant square
+		// otherwise, clear the en passant square
+		if (board[to[0] - 48][to[1] - 48] == 'P' && (from[0] - 48) - (to[0] - 48) == 2)
+		{
+			newPosition.enpassant = to_string(to[0] - 48 + 1) + to_string(to[1] - 48);
+		}
+		else if (board[to[0] - 48][to[1] - 48] == 'p' && (from[0] - 48) - (to[0] - 48) == -2)
+		{
+			newPosition.enpassant = to_string(to[0] - 48 - 1) + to_string(to[1] - 48);
+		}
+		else
+		{
+			newPosition.enpassant = "";
+		}
+
+		// if a pawn moved to an empty square, then clear the square behind it (to handle en passant captures)
+		if (board[to[0] - 48][to[1] - 48] == 'P' && toPrev == ' ')
+		{
+			board[to[0] - 48 + 1][to[1] - 48] = ' ';
+		}
+		if (board[to[0] - 48][to[1] - 48] == 'p' && toPrev == ' ')
+		{
+			board[to[0] - 48 - 1][to[1] - 48] = ' ';
+		}
+
+		break;
+	}
+	case 1:
+	{
+		board[7][4] = ' ';
+		board[7][5] = 'R';
+		board[7][6] = 'K';
+		board[7][7] = ' ';
+		break;
+	}
+	case 2:
+	{
+		board[7][0] = ' ';
+		board[7][2] = 'K';
+		board[7][3] = 'R';
+		board[7][4] = ' ';
+		break;
+	}
+	case 3:
+	{
+		board[0][4] = ' ';
+		board[0][5] = 'r';
+		board[0][6] = 'k';
+		board[0][7] = ' ';
+		break;
+	}
+	case 4:
+	{
+		board[0][0] = ' ';
+		board[0][2] = 'k';
+		board[0][3] = 'r';
+		board[0][4] = ' ';
+		break;
+	}
+	}
+
+	// modify castling permissions and send to parameters
+	if (from == "74" || from == "77") { newPosition.castling[0] = false; }
+	if (from == "74" || from == "70") { newPosition.castling[1] = false; }
+	if (from == "04" || from == "07") { newPosition.castling[2] = false; }
+	if (from == "04" || from == "00") { newPosition.castling[3] = false; }
+
+	memcpy(newPosition.board, board, 64 * sizeof(char));
+
+	return newPosition;
+}
+
+map<string, vector<string>> helper::getLegalMoves(Position position, bool whiteToMove)
+{
+	char board[8][8];
+	bool castling[4];
+	string enpassant;
+	memcpy(board, position.board, 64 * sizeof(char));
+	memcpy(castling, position.castling, 4 * sizeof(bool));
+	
+	// always look for check
+	bool playerCheckDetection = true;
+	//bool playerCheckDetection = whiteToMove;
+
 	// load the legal moves; white to move
 	map<string, vector<string>> legalMoves;
 	if (whiteToMove)
@@ -851,7 +972,7 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 			{
 				// pawns
 				if (j > 0 && tempBoard[i - 1][j - 1] == 'p') { pieceIllegal.push_back(to); }
-				if (j < 7 && tempBoard[i - 1][j + 1] >= 'p') { pieceIllegal.push_back(to); }
+				if (j < 7 && tempBoard[i - 1][j + 1] == 'p') { pieceIllegal.push_back(to); }
 
 				// knights
 				vector<vector<int>> knightPos;
@@ -998,8 +1119,8 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 			else // black to move
 			{
 				// pawns
-				if (j > 0 && tempBoard[i - 1][j - 1] == 'P') { pieceIllegal.push_back(to); }
-				if (j < 7 && tempBoard[i - 1][j + 1] >= 'P') { pieceIllegal.push_back(to); }
+				if (j > 0 && tempBoard[i + 1][j - 1] == 'P') { pieceIllegal.push_back(to); }
+				if (j < 7 && tempBoard[i + 1][j + 1] == 'P') { pieceIllegal.push_back(to); }
 
 				// knights
 				vector<vector<int>> knightPos;
@@ -1211,34 +1332,4 @@ map<string, vector<string>> helper::getLegalMoves(char board[8][8], bool whiteTo
 #pragma endregion
 
 	return legalMoves;
-}
-
-float helper::getPieceValue(char piece)
-{
-	switch (piece)
-	{
-	case 'K':
-	case 'k':
-		return 10000;
-
-	case 'Q':
-	case 'q':
-		return 9;
-
-	case 'R':
-	case 'r':
-		return 5;
-
-	case 'B':
-	case 'b':
-		return 3.2;
-
-	case 'N':
-	case 'n':
-		return 3;
-
-	case 'P':
-	case 'p':
-		return 1;
-	}
 }
