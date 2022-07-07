@@ -1,7 +1,12 @@
 #define NOMINMAX
+#define _CRTDBG_MAP_ALLOC
 #include <windows.h>
 #include <stdio.h>
 #include <iostream>
+
+
+#include <stdlib.h>
+#include <crtdbg.h>
 
 #include "parameters.h"
 #include "engine.h"
@@ -67,6 +72,17 @@ UINT quitThread(LPVOID pParam)
 
 int main(void)
 {
+	clock_t c = clock();
+	int j = 0;
+	for (int i = 0; i < 1000000000; i++)
+	{
+		j += 1;
+	}
+
+	cout << 1000.0 * (clock() - c) / CLOCKS_PER_SEC << " ms" << endl;
+	return 0;
+
+
 	HANDLE *handles = new HANDLE[3];
 	Parameters p;
 
@@ -76,15 +92,35 @@ int main(void)
 	p.finished = CreateSemaphore(NULL, 0, threadCount, NULL);
 	p.eventQuit = CreateEvent(NULL, true, false, NULL);
 
-	//string fen = "k1K5/8/1P1p1p2/8/8/2P5/8/8 w - - 0 1";
-	string fen = "5prk/5ppb/5ppp/5ppn/8/8/7K/5P2 w - - 0 1"; // depth 3
-	//string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-	p.initialFen = helper::splitToVector(fen, ' ')[0];
+	string fen = "";
+	int fenOption = 3;
 
+	switch (fenOption)
+	{
+	case 0:
+		// standard starting position
+		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+		break;
+	case 1:
+		// depth 2 test
+		fen = "k1K5/8/1P1p1p2/8/8/2P5/8/8 w - - 0 1";
+		break;
+	case 2:
+		// depth 3 test
+		fen = "5prk/5ppb/5ppp/5ppn/8/8/7K/5P2 w - - 0 1";
+		break;
+	case 3:
+		// endgame test
+		fen = "4k3/4r3/8/8/8/8/3PPP2/4K3 w - - 0 1";
+		break;
+	}
+
+
+	p.initialFen = helper::splitToVector(fen, ' ')[0];
 	p.maxDepth = 3;
 
 	// debug
-	int debugVal = 15;
+	int debugVal = 3;
 	p.windowPrint = debugVal % 2 == 0;
 	p.enginePrint = debugVal % 3 == 0;
 	p.evaluatorPrint = debugVal % 5 == 0;
@@ -99,6 +135,8 @@ int main(void)
 		WaitForSingleObject(handles[i], INFINITE);
 		CloseHandle(handles[i]);
 	}
+
+	//_CrtDumpMemoryLeaks();
 
 	return 0;
 }

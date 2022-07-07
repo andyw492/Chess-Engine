@@ -24,7 +24,7 @@ public:
 
 	string prevMove = ""; // debugging
 
-	int childDeleteIndex = 0;
+	int deleteIndex = 0; // freeing memory
 };
 
 #endif

@@ -28,6 +28,8 @@ namespace helper
 	Position getNewPosition(Position before, string from, string to);
 
 	map<string, vector<string>> getLegalMoves(Position position, bool whiteToMove);
+
+	bool inCheck(char board[8][8], bool whiteToMove);
 }
 
 #endif

@@ -17,10 +17,12 @@ UINT Evaluator::start(LPVOID pParam)
 	{
 		// check if window is still open
 		bool windowClosed = false;
+		string gameResult = "";
 		WaitForSingleObject(p->mutex, INFINITE);
 		windowClosed = p->windowClosed;
+		gameResult = p->gameResult;
 		ReleaseMutex(p->mutex);
-		if (windowClosed) { break; }
+		if (windowClosed || gameResult.length() > 0) { break; }
 
 		// wait for a node to evaluate
 		bool toEvaluate = false;
@@ -116,6 +118,28 @@ UINT Evaluator::start(LPVOID pParam)
 
 		node->value = minMax;
 
+		// if no legal moves in the position, then set value to:
+		// 0 if stalemate
+		// 10000 if white victory
+		// -10000 if black victory
+		if (legalMoves.size() == 0)
+		{
+			if (helper::inCheck(position.board, !node->min))
+			{
+				node->value = -10000;
+			}
+			else if (helper::inCheck(position.board, node->min))
+			{
+				node->value = 10000;
+			}
+			else
+			{
+				node->value = 0;
+			}
+
+			values.push_back(node->value);
+		}
+
 		if (dpr)
 		{
 			string minMaxString = (node->min ? "min" : "max");
@@ -125,10 +149,9 @@ UINT Evaluator::start(LPVOID pParam)
 			{
 				cout << value << " ";
 			}
-			cout << "] = " << minMax << endl;
+			cout << "] = " << node->value << endl;
 			ReleaseMutex(p->mutex);
 		}
-
 
 		WaitForSingleObject(p->mutex, INFINITE);
 		p->evaluated = (char*)node;

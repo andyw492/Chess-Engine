@@ -32,6 +32,8 @@ public:
 	bool windowPrint = false;
 	bool enginePrint = false;
 	bool evaluatorPrint = false;
+
+	string gameResult = "";
 };
 
 #endif

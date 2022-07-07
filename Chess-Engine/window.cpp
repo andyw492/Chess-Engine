@@ -70,6 +70,7 @@ vector<string> Window::setPiecePositions(char board[8][8])
 			if (board[y][x] != ' ')
 			{
 				char pieceChar = board[y][x];
+
 				string pieceName = "";
 				for (int i = 0; i < available.size(); i++)
 				{
@@ -410,47 +411,13 @@ void Window::display(LPVOID pParam)
 
 		// check if the game ended
 #pragma region
-		bool whiteKingAlive = false;
-		bool blackKingAlive = false;
-		for (int y = 0; y < 8; y++)
+		string gameResult = "";
+		WaitForSingleObject(p->mutex, INFINITE);
+		gameResult = p->gameResult;
+		ReleaseMutex(p->mutex);
+		if (gameResult.length() > 0)
 		{
-			for (int x = 0; x < 8; x++)
-			{
-				if (board[y][x] == 'K') { whiteKingAlive = true; }
-				if (board[y][x] == 'k') { blackKingAlive = true; }
-			}
-		}
-		assert(whiteKingAlive || blackKingAlive);
-
-		if (!blackKingAlive)
-		{
-			text.setString("you won!!");
-
-			// get the positions of the pieces to draw from the current board
-			piecesToDraw = setPiecePositions(board);
-
-			window.clear(sf::Color::White);
-			window.draw(*objects["board_white"]);
-			if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
-			{
-				window.draw(*objects["selectionRectangle"]);
-			}
-
-			for (int i = 0; i < piecesToDraw.size(); i++)
-			{
-				window.draw(*objects[piecesToDraw[i]]);
-			}
-
-			window.display();
-
-			window.draw(text);
-			window.display();
-			Sleep(2000);
-			window.close();
-		}
-		if (!whiteKingAlive)
-		{
-			text.setString("you lost!!");
+			text.setString(gameResult);
 
 			// get the positions of the pieces to draw from the current board
 			piecesToDraw = setPiecePositions(board);
@@ -539,18 +506,24 @@ void Window::display(LPVOID pParam)
 				int squareY = floor((mousePos.y - 30) / 70);
 				int squareX = floor((mousePos.x - 30) / 70);
 
-				bool playerToMove = false;
-				WaitForSingleObject(p->mutex, INFINITE);
-				playerToMove = p->playerToMove;
-				ReleaseMutex(p->mutex);
-
 				bool clickedInBoard = max(mousePos.x, mousePos.y) < 590 && min(mousePos.x, mousePos.y) >= 30;
 
 				// used to decide if it is engines turn after mouse click
 				bool madeMove = false;
 
+				// check if game is over
+				string gameResult = "";
+				WaitForSingleObject(p->mutex, INFINITE);
+				gameResult = p->gameResult;
+				ReleaseMutex(p->mutex);
+
+				bool playerToMove = false;
+				WaitForSingleObject(p->mutex, INFINITE);
+				playerToMove = p->playerToMove;
+				ReleaseMutex(p->mutex);
+
 				// only process a click in the board if players turn
-				if (clickedInBoard && playerToMove)
+				if (clickedInBoard && playerToMove && gameResult.length() == 0)
 				{
 					// get the current board from parameters
 					WaitForSingleObject(p->mutex, INFINITE);

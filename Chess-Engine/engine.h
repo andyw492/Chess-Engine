@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <ctime>
 #include <chrono>
+#include <iomanip>
 
 #include "parameters.h"
 #include "helper.h"
@@ -34,11 +35,18 @@ public:
 
 	Engine(bool enginePrint);
 
+	void startClock();
+	void printTime();
+
+	void deletePositionTree(PositionNode* node);
+
 	UINT start(LPVOID pParam);
 
 private:
 
 	bool dpr = false;
+	clock_t clockStart;
+	float lastTime = 0;
 };
 
 #endif

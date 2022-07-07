@@ -78,10 +78,10 @@ Position helper::getNewPosition(Position before, string from, string to)
 	// 6 == en passant
 
 	int moveType = 0;
-	if (from == "74" && to == "76") { moveType = 1; }
-	if (from == "74" && to == "72") { moveType = 2; }
-	if (from == "04" && to == "06") { moveType = 3; }
-	if (from == "04" && to == "02") { moveType = 4; }
+	if (board[7][4] == 'K' && from == "74" && to == "76") { moveType = 1; }
+	if (board[7][4] == 'K' && from == "74" && to == "72") { moveType = 2; }
+	if (board[0][4] == 'k' && from == "04" && to == "06") { moveType = 3; }
+	if (board[0][4] == 'k' && from == "04" && to == "02") { moveType = 4; }
 
 	// modify the board
 	switch (moveType)
@@ -987,11 +987,6 @@ map<string, vector<string>> helper::getLegalMoves(Position position, bool whiteT
 					if (y >= 0 && y <= 7 && x >= 0 && x <= 7 && tempBoard[y][x] == 'n') { pieceIllegal.push_back(to); }
 				}
 
-				if (move.second[iter] == "74")
-				{
-					cout << endl;
-				}
-
 				// bishops, rooks, queen
 #pragma region
 				// top left
@@ -1332,4 +1327,313 @@ map<string, vector<string>> helper::getLegalMoves(Position position, bool whiteT
 #pragma endregion
 
 	return legalMoves;
+}
+ 
+// (copied from getLegalMoves())
+// if whiteToMove == true, then returns true if white is in check
+bool helper::inCheck(char board[8][8], bool whiteToMove)
+{
+	int i = -1;
+	int j = -1;
+	for (int y = 0; y < 8; y++)
+	{
+		for (int x = 0; x < 8; x++)
+		{
+			if ((whiteToMove && board[y][x] == 'K') || (!whiteToMove && board[y][x] == 'k'))
+			{
+				i = y;
+				j = x;
+				y = 8; x = 8; // break from loops
+			}
+		}
+	}
+
+	// check if the king can be captured by each type of piece
+	if (whiteToMove)
+	{
+		// pawns
+		if (j > 0 && board[i - 1][j - 1] == 'p') { return true; }
+		if (j < 7 && board[i - 1][j + 1] == 'p') { return true; }
+
+		// knights
+		vector<vector<int>> knightPos;
+		knightPos.push_back({ i - 2, j - 1 }); knightPos.push_back({ i - 2, j + 1 });
+		knightPos.push_back({ i - 1, j - 2 }); knightPos.push_back({ i - 1, j + 2 });
+		knightPos.push_back({ i + 1, j - 2 }); knightPos.push_back({ i + 1, j + 2 });
+		knightPos.push_back({ i + 2, j - 1 }); knightPos.push_back({ i + 2, j + 1 });
+		for (int k = 0; k < knightPos.size(); k++)
+		{
+			int y = knightPos[k][0];
+			int x = knightPos[k][1];
+			if (y >= 0 && y <= 7 && x >= 0 && x <= 7 && board[y][x] == 'n') { return true; }
+		}
+
+		// bishops, rooks, queen
+#pragma region
+				// top left
+		int y = i - 1;
+		int x = j - 1;
+		while (y >= 0 && x >= 0 && (board[y][x] == ' ' || board[y][x] == 'b' || board[y][x] == 'q'))
+		{
+			if (board[y][x] == 'b' || board[y][x] == 'q') { return true; break; }
+			y--;
+			x--;
+		}
+
+		// top right
+		y = i - 1;
+		x = j + 1;
+		while (y >= 0 && x <= 7 && (board[y][x] == ' ' || board[y][x] == 'b' || board[y][x] == 'q'))
+		{
+			if (board[y][x] == 'b' || board[y][x] == 'q') { return true; break; }
+			y--;
+			x++;
+		}
+
+		// bottom left
+		y = i + 1;
+		x = j - 1;
+		while (y <= 7 && x >= 0 && (board[y][x] == ' ' || board[y][x] == 'b' || board[y][x] == 'q'))
+		{
+			if (board[y][x] == 'b' || board[y][x] == 'q') { return true; break; }
+			y++;
+			x--;
+		}
+
+		// bottom right
+		y = i + 1;
+		x = j + 1;
+		while (y <= 7 && x <= 7 && (board[y][x] == ' ' || board[y][x] == 'b' || board[y][x] == 'q'))
+		{
+			if (board[y][x] == 'b' || board[y][x] == 'q') { return true; break; }
+			y++;
+			x++;
+		}
+
+		// top
+		y = i - 1;
+		x = j;
+		while (y >= 0 && (board[y][x] == ' ' || board[y][x] == 'r' || board[y][x] == 'q'))
+		{
+			if (board[y][x] == 'r' || board[y][x] == 'q') { return true; break; }
+			y--;
+		}
+
+		// left
+		y = i;
+		x = j - 1;
+		while (x >= 0 && (board[y][x] == ' ' || board[y][x] == 'r' || board[y][x] == 'q'))
+		{
+			if (board[y][x] == 'r' || board[y][x] == 'q') { return true; break; }
+			x--;
+		}
+
+		// right
+		y = i;
+		x = j + 1;
+		while (x <= 7 && (board[y][x] == ' ' || board[y][x] == 'r' || board[y][x] == 'q'))
+		{
+			if (board[y][x] == 'r' || board[y][x] == 'q') { return true; break; }
+			x++;
+		}
+
+		// bottom
+		y = i + 1;
+		x = j;
+		while (y <= 7 && (board[y][x] == ' ' || board[y][x] == 'r' || board[y][x] == 'q'))
+		{
+			if (board[y][x] == 'r' || board[y][x] == 'q') { return true; break; }
+			y++;
+		}
+#pragma endregion
+
+		// king
+#pragma region
+				// top left
+		y = i - 1;
+		x = j - 1;
+		if (y >= 0 && x >= 0 && (board[y][x] == 'k')) { return true; }
+
+		// top
+		y = i - 1;
+		x = j;
+		if (y >= 0 && (board[y][x] == 'k')) { return true; }
+
+		// top right
+		y = i - 1;
+		x = j + 1;
+		if (y >= 0 && x <= 7 && (board[y][x] == 'k')) { return true; }
+
+		// left
+		y = i;
+		x = j - 1;
+		if (x >= 0 && (board[y][x] == 'k')) { return true; }
+
+		// right
+		y = i;
+		x = j + 1;
+		if (x <= 7 && (board[y][x] == 'k')) { return true; }
+
+		// bottom left
+		y = i + 1;
+		x = j - 1;
+		if (y <= 7 && x >= 0 && (board[y][x] == 'k')) { return true; }
+
+		// bottom
+		y = i + 1;
+		x = j;
+		if (y <= 7 && (board[y][x] == 'k')) { return true; }
+
+		// bottom right
+		y = i + 1;
+		x = j + 1;
+		if (y <= 7 && x <= 7 && (board[y][x] == 'k')) { return true; }
+#pragma endregion
+
+	}
+
+	else // black to move
+	{
+		// pawns
+		if (j > 0 && board[i + 1][j - 1] == 'P') { return true; }
+		if (j < 7 && board[i + 1][j + 1] == 'P') { return true; }
+
+		// knights
+		vector<vector<int>> knightPos;
+		knightPos.push_back({ i - 2, j - 1 }); knightPos.push_back({ i - 2, j + 1 });
+		knightPos.push_back({ i - 1, j - 2 }); knightPos.push_back({ i - 1, j + 2 });
+		knightPos.push_back({ i + 1, j - 2 }); knightPos.push_back({ i + 1, j + 2 });
+		knightPos.push_back({ i + 2, j - 1 }); knightPos.push_back({ i + 2, j + 1 });
+		for (int k = 0; k < knightPos.size(); k++)
+		{
+			int y = knightPos[k][0];
+			int x = knightPos[k][1];
+			if (y >= 0 && y <= 7 && x >= 0 && x <= 7 && board[y][x] == 'N') { return true; }
+		}
+
+		// bishops, rooks, queen
+#pragma region
+				// top left
+		int y = i - 1;
+		int x = j - 1;
+		while (y >= 0 && x >= 0 && (board[y][x] == ' ' || board[y][x] == 'B' || board[y][x] == 'Q'))
+		{
+			if (board[y][x] == 'B' || board[y][x] == 'Q') { return true; break; }
+			y--;
+			x--;
+		}
+
+		// top right
+		y = i - 1;
+		x = j + 1;
+		while (y >= 0 && x <= 7 && (board[y][x] == ' ' || board[y][x] == 'B' || board[y][x] == 'Q'))
+		{
+			if (board[y][x] == 'B' || board[y][x] == 'Q') { return true; break; }
+			y--;
+			x++;
+		}
+
+		// bottom left
+		y = i + 1;
+		x = j - 1;
+		while (y <= 7 && x >= 0 && (board[y][x] == ' ' || board[y][x] == 'B' || board[y][x] == 'Q'))
+		{
+			if (board[y][x] == 'B' || board[y][x] == 'Q') { return true; break; }
+			y++;
+			x--;
+		}
+
+		// bottom right
+		y = i + 1;
+		x = j + 1;
+		while (y <= 7 && x <= 7 && (board[y][x] == ' ' || board[y][x] == 'B' || board[y][x] == 'Q'))
+		{
+			if (board[y][x] == 'B' || board[y][x] == 'Q') { return true; break; }
+			y++;
+			x++;
+		}
+
+		// top
+		y = i - 1;
+		x = j;
+		while (y >= 0 && (board[y][x] == ' ' || board[y][x] == 'R' || board[y][x] == 'Q'))
+		{
+			if (board[y][x] == 'R' || board[y][x] == 'Q') { return true; break; }
+			y--;
+		}
+
+		// left
+		y = i;
+		x = j - 1;
+		while (x >= 0 && (board[y][x] == ' ' || board[y][x] == 'R' || board[y][x] == 'Q'))
+		{
+			if (board[y][x] == 'R' || board[y][x] == 'Q') { return true; break; }
+			x--;
+		}
+
+		// right
+		y = i;
+		x = j + 1;
+		while (x <= 7 && (board[y][x] == ' ' || board[y][x] == 'R' || board[y][x] == 'Q'))
+		{
+			if (board[y][x] == 'R' || board[y][x] == 'Q') { return true; break; }
+			x++;
+		}
+
+		// bottom
+		y = i + 1;
+		x = j;
+		while (y <= 7 && (board[y][x] == ' ' || board[y][x] == 'R' || board[y][x] == 'Q'))
+		{
+			if (board[y][x] == 'R' || board[y][x] == 'Q') { return true; break; }
+			y++;
+		}
+#pragma endregion
+
+		// king
+#pragma region
+				// top left
+		y = i - 1;
+		x = j - 1;
+		if (y >= 0 && x >= 0 && (board[y][x] == 'K')) { return true; }
+
+		// top
+		y = i - 1;
+		x = j;
+		if (y >= 0 && (board[y][x] == 'K')) { return true; }
+
+		// top right
+		y = i - 1;
+		x = j + 1;
+		if (y >= 0 && x <= 7 && (board[y][x] == 'K')) { return true; }
+
+		// left
+		y = i;
+		x = j - 1;
+		if (x >= 0 && (board[y][x] == 'K')) { return true; }
+
+		// right
+		y = i;
+		x = j + 1;
+		if (x <= 7 && (board[y][x] == 'K')) { return true; }
+
+		// bottom left
+		y = i + 1;
+		x = j - 1;
+		if (y <= 7 && x >= 0 && (board[y][x] == 'K')) { return true; }
+
+		// bottom
+		y = i + 1;
+		x = j;
+		if (y <= 7 && (board[y][x] == 'K')) { return true; }
+
+		// bottom right
+		y = i + 1;
+		x = j + 1;
+		if (y <= 7 && x <= 7 && (board[y][x] == 'K')) { return true; }
+#pragma endregion
+
+	}
+
+	return false;
 }
