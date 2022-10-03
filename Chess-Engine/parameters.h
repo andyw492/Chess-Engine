@@ -4,10 +4,14 @@
 #define NOMINMAX
 #include <windows.h>
 #include <iostream>
+#include <stack>
+#include <vector>
 
 #include "position.h"
 
 using std::string;
+using std::stack;
+using std::vector;
 
 class Parameters
 {
@@ -23,8 +27,11 @@ public:
 	bool playerToMove = true;
 	Position currentPosition;
 
-	char* toEvaluate = nullptr;
-	char* evaluated = nullptr;
+	//char* toEvaluate;
+	//char* evaluated;
+	stack<char*> toEvaluate;
+	vector<float> values;
+	bool evaluatorError = false;
 
 	int maxDepth = 0;
 	string bestMove = "";

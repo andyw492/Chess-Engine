@@ -15,28 +15,34 @@ UINT Evaluator::start(LPVOID pParam)
 
 	while (true)
 	{
-		// check if window is still open
+		// check if window closed or game ended
 		bool windowClosed = false;
 		string gameResult = "";
+
+		// wait for a node to evaluate
+		char* toEvaluate = nullptr;
+		PositionNode* node = nullptr;
+
 		WaitForSingleObject(p->mutex, INFINITE);
+		if (!p->toEvaluate.empty())
+		{
+			toEvaluate = p->toEvaluate.top();
+			p->toEvaluate.pop();
+		}
 		windowClosed = p->windowClosed;
 		gameResult = p->gameResult;
 		ReleaseMutex(p->mutex);
+
 		if (windowClosed || gameResult.length() > 0) { break; }
 
-		// wait for a node to evaluate
-		bool toEvaluate = false;
-		PositionNode* node = nullptr;
-		WaitForSingleObject(p->mutex, INFINITE);
-		toEvaluate = (p->toEvaluate != nullptr);
-		if (toEvaluate)
+		if (toEvaluate != nullptr)
 		{
-			node = (PositionNode*)p->toEvaluate;
-			p->toEvaluate = nullptr;
+			node = (PositionNode*)toEvaluate;
 		}
-		ReleaseMutex(p->mutex);
-
-		if (!toEvaluate) { continue; }
+		else
+		{
+			continue;
+		}
 
 		vector<float> values; // debug
 
@@ -154,7 +160,7 @@ UINT Evaluator::start(LPVOID pParam)
 		}
 
 		WaitForSingleObject(p->mutex, INFINITE);
-		p->evaluated = (char*)node;
+		p->values.push_back(node->value);
 		ReleaseMutex(p->mutex);
 	}
 

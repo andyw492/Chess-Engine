@@ -12,6 +12,8 @@ void Engine::startClock()
 
 void Engine::printTime()
 {
+	if (!dpr) { return; }
+
 	float total = 1000.0 * (clock() - clockStart) / CLOCKS_PER_SEC;
 	cout << std::setw(3) << std::setfill(' ') << total - lastTime;
 	cout << " ms elapsed; " << total << " ms total" << endl;
@@ -40,20 +42,20 @@ UINT Engine::start(LPVOID pParam)
 
 	while(true)
 	{
-		// check if window is still open
+		// check if window closed or game ended
 		bool windowClosed = false;
 		string gameResult = "";
-		WaitForSingleObject(p->mutex, INFINITE);
-		windowClosed = p->windowClosed;
-		gameResult = p->gameResult;
-		ReleaseMutex(p->mutex);
-		if (windowClosed || gameResult.length() > 0) { break; }
 
 		// check if engine's turn
 		bool engineToMove = false;
+
 		WaitForSingleObject(p->mutex, INFINITE);
 		engineToMove = !p->playerToMove;
+		windowClosed = p->windowClosed;
+		gameResult = p->gameResult;
 		ReleaseMutex(p->mutex);
+
+		if (windowClosed || gameResult.length() > 0) { break; }
 
 		if (!engineToMove)
 		{
@@ -119,13 +121,15 @@ UINT Engine::start(LPVOID pParam)
 		// pseudocode: https://pastebin.com/MNrCY7eu
 		while (true)
 		{
-			// check if window is still open
+			// check if window closed or game ended
 			bool windowClosed = false;
 			string gameResult = "";
+
 			WaitForSingleObject(p->mutex, INFINITE);
 			windowClosed = p->windowClosed;
 			gameResult = p->gameResult;
 			ReleaseMutex(p->mutex);
+
 			if (windowClosed || gameResult.length() > 0) { break; }
 
 			bool allEvaluated = true;
@@ -137,7 +141,7 @@ UINT Engine::start(LPVOID pParam)
 			}
 			for (int i = 0; i < currentNode->children.size(); i++)
 			{
-				if (!currentNode->children[i]->evaluated) { allEvaluated = false; }
+				if (!currentNode->children[i]->evaluated) { allEvaluated = false; break; }
 			}
 
 			if (currentNode->depth == 0 && allEvaluated)
@@ -157,11 +161,10 @@ UINT Engine::start(LPVOID pParam)
 
 			if (dpr)
 			{
-				printTime();
 				cout << "expanding tree" << endl;
 			}
 
-			while ((!allEvaluated || currentNode->children.size() == 0) && !gameEnd)
+			while (currentNode->depth < maxDepth - 1 && !gameEnd)
 			{
 				if (currentNode->children.size() == 0)
 				{
@@ -176,37 +179,18 @@ UINT Engine::start(LPVOID pParam)
 						//	}
 						//	cout << endl;
 						//}
-						cout << "\ncurrent depth " << currentNode->depth << ", creating children" << endl;
+						if (dpr)
+						{
+							cout << "\ncurrent depth " << currentNode->depth << ", creating children" << endl;
+						}
+						
 						printTime();
 					}
 
 					Position position = currentNode->position;
 					map<string, vector<string>> legalMoves = helper::getLegalMoves(position, !currentNode->min);
 
-					// if no legal moves in the position, then set value to:
-					// 0 if stalemate
-					// 10000 if white victory
-					// -10000 if black victory
-					if (legalMoves.size() == 0)
-					{
-						gameEnd = true;
-						currentNode->evaluated = true;
-
-						if (helper::inCheck(position.board, !currentNode->min))
-						{
-							currentNode->value = -10000;
-						}
-						else if (helper::inCheck(position.board, currentNode->min))
-						{
-							currentNode->value = 10000;
-						}
-						else
-						{
-							currentNode->value = 0;
-						}
-						cout << "";
-					}
-
+					// create children
 					for (auto move : legalMoves)
 					{
 						for (int i = 0; i < move.second.size(); i++)
@@ -223,70 +207,128 @@ UINT Engine::start(LPVOID pParam)
 							currentNode->children.push_back(newNode);
 						}
 					}
-				}
 
-				for (int i = 0; i < currentNode->children.size(); i++)
-				{
-					if (!currentNode->children[i]->evaluated)
+					// if no legal moves in the position
+					// then set current node's value to 0 if stalemate, 10000 if white victory, -10000 if black victory
+					if (legalMoves.size() == 0)
 					{
-						currentNode = currentNode->children[i];
-						cout << "\nenter depth " << currentNode->depth << endl;
-						printTime();
-						break;
+						gameEnd = true;
 
+						if (helper::inCheck(position.board, !currentNode->min))
+						{
+							currentNode->value = -10000;
+						}
+						else if (helper::inCheck(position.board, currentNode->min))
+						{
+							currentNode->value = 10000;
+						}
+						else
+						{
+							currentNode->value = 0;
+						}
+
+						currentNode->evaluated = true;
+					}
+					else
+					{
+						currentNode = currentNode->children[0];
 					}
 				}
 
-				if (currentNode->depth == maxDepth - 1 && !currentNode->evaluated)
+				else if (!allEvaluated)
 				{
-					WaitForSingleObject(p->mutex, INFINITE);
-					p->toEvaluate = (char*)currentNode;
-					p->evaluated = nullptr;
-					ReleaseMutex(p->mutex);
-
-					cout << "evaluate node at depth " << currentNode->depth << endl;
-					printTime();
-
-					// wait for current node to evaluate
-					bool evaluated = false;
-					while (!evaluated)
+					// current node = first unevaluated child
+					for (int i = 0; i < currentNode->children.size(); i++)
 					{
-						// check if window is still open
-						bool windowClosed = false;
-						string gameResult = "";
-						WaitForSingleObject(p->mutex, INFINITE);
-						windowClosed = p->windowClosed;
-						gameResult = p->gameResult;
-						ReleaseMutex(p->mutex);
-						if (windowClosed || gameResult.length() > 0) { break; }
-
-						WaitForSingleObject(p->mutex, INFINITE);
-						evaluated = (p->evaluated != nullptr);
-						ReleaseMutex(p->mutex);
+						if (!currentNode->children[i]->evaluated)
+						{
+							currentNode = currentNode->children[i];
+							if (dpr)
+							{
+								cout << "\nenter depth " << currentNode->depth << endl;
+							}
+							
+							break;
+						}
 					}
+				}
 
-					printTime();
-
-					float value = 0;
-					WaitForSingleObject(p->mutex, INFINITE);
-					value = ((PositionNode*)p->evaluated)->value;
-					ReleaseMutex(p->mutex);
-
-					currentNode->value = value;
-					currentNode->evaluated = true;
-
-					if (dpr)
-					{
-						//cout << "current node evaluated to " << value << endl;
-					}
-
+				else
+				{
 					break;
 				}
+			}
+
+			if (currentNode->depth == maxDepth - 1 && !gameEnd)
+			{
+				currentNode = currentNode->parent;
+
+				if (dpr)
+				{
+					cout << "\nevaluate node at depth " << currentNode->depth << ": " << endl;
+				}
+
+				WaitForSingleObject(p->mutex, INFINITE);
+				for (int i = 0; i < currentNode->children.size(); i++)
+				{
+					p->toEvaluate.push((char*)currentNode->children[i]);
+				}
+				ReleaseMutex(p->mutex);
+
+				// wait for current node to evaluate
+				while (true)
+				{
+					bool windowClosed = false;
+					string gameResult = "";
+					int valuesDone = 0;
+					bool evaluatorError = false;
+
+					WaitForSingleObject(p->mutex, INFINITE);
+					windowClosed = p->windowClosed;
+					gameResult = p->gameResult;
+					valuesDone = p->values.size();
+					evaluatorError = p->evaluatorError;
+					ReleaseMutex(p->mutex);
+
+					if (windowClosed || gameResult.length() > 0)
+					{
+						break;
+					}
+
+					if (valuesDone == currentNode->children.size())
+					{
+						break;
+					}
+
+					if (evaluatorError)
+					{
+						cout << "\n\n\nevaluator error\n\n\n" << endl;
+						break;
+					}
+				}
+
+				vector<float> values;
+				WaitForSingleObject(p->mutex, INFINITE);
+				values = p->values;
+				p->values.clear();
+				ReleaseMutex(p->mutex);
+					
+				float minMax = (currentNode->min ? FLT_MAX : -FLT_MAX);
+				for (float value : values)
+				{
+					minMax = (currentNode->min ? min(minMax, value) : max(minMax, value));
+				}
+
+				currentNode->value = minMax;
+				currentNode->evaluated = true;
+
+				printTime();
 			}
 
 			float currentValue = currentNode->value;
 			float parentValue = currentNode->parent->value;
 			currentNode->parent->value = (currentNode->parent->min ? min(currentValue, parentValue) : max(currentValue, parentValue));
+			currentNode->parent->evaluated = true;
 
 			if (dpr)
 			{
@@ -298,25 +340,24 @@ UINT Engine::start(LPVOID pParam)
 			}
 
 			currentNode = currentNode->parent;
-			currentNode->evaluated = true;
-
 		}
 
 		// delete the position node tree
 		deletePositionTree(root);
 
-		WaitForSingleObject(p->mutex, INFINITE);
-		cout << "sending best position:" << endl;
-		for (int a = 0; a < 8; a++)
+		if (dpr)
 		{
-			for (int b = 0; b < 8; b++)
+			cout << "sending best position:" << endl;
+			for (int a = 0; a < 8; a++)
 			{
-				cout << bestPosition.board[a][b] << " ";
+				for (int b = 0; b < 8; b++)
+				{
+					cout << bestPosition.board[a][b] << " ";
+				}
+				cout << endl;
 			}
-			cout << endl;
 		}
-		ReleaseMutex(p->mutex);
-		
+
 		// send the resulting position to parameters
 		WaitForSingleObject(p->mutex, INFINITE);
 		p->currentPosition = bestPosition;

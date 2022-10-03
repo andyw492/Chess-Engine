@@ -64,6 +64,8 @@ void helper::fenToMatrix(string fen, char matrix[8][8])
 Position helper::getNewPosition(Position before, string from, string to)
 {
 	Position newPosition;
+	
+	memcpy(newPosition.castling, before.castling, 4 * sizeof(bool));
 
 	char board[8][8];
 	memcpy(board, before.board, 64 * sizeof(char));
@@ -162,10 +164,16 @@ Position helper::getNewPosition(Position before, string from, string to)
 	}
 
 	// modify castling permissions and send to parameters
-	if (from == "74" || from == "77") { newPosition.castling[0] = false; }
-	if (from == "74" || from == "70") { newPosition.castling[1] = false; }
-	if (from == "04" || from == "07") { newPosition.castling[2] = false; }
-	if (from == "04" || from == "00") { newPosition.castling[3] = false; }
+	bool changed = false;
+	if (from == "74" || from == "77") { newPosition.castling[0] = false; changed = true; }
+	if (from == "74" || from == "70") { newPosition.castling[1] = false; changed = true; }
+	if (from == "04" || from == "07") { newPosition.castling[2] = false; changed = true; }
+	if (from == "04" || from == "00") { newPosition.castling[3] = false; changed = true; }
+
+	if (changed)
+	{
+		cout << "";
+	}
 
 	memcpy(newPosition.board, board, 64 * sizeof(char));
 
