@@ -1,3 +1,14 @@
-﻿  main.cpp
+﻿  engine.cpp
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(17): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(33): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(50): warning C4305: '*=': truncation from 'double' to 'float'
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(274): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(315): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(319): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(327): warning C4305: '=': truncation from 'int' to 'float'
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(331): warning C4305: '=': truncation from 'int' to 'float'
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(352): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(383): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(409): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/FORCE' specification
   Chess-Engine.vcxproj -> C:\Users\Andy Wang\source\repos\Chess-Engine\Debug\Chess-Engine.exe

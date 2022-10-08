@@ -6,12 +6,14 @@
 #include <iostream>
 #include <stack>
 #include <vector>
+#include <unordered_map>
 
 #include "position.h"
 
 using std::string;
 using std::stack;
 using std::vector;
+using std::unordered_map;
 
 class Parameters
 {
@@ -29,7 +31,9 @@ public:
 
 	//char* toEvaluate;
 	//char* evaluated;
-	stack<char*> toEvaluate;
+	stack<char*> toExpand;
+	unordered_map<int, char*> expanded;
+
 	vector<float> values;
 	bool evaluatorError = false;
 

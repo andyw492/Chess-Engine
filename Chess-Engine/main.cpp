@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <iostream>
-
+#include <cstdlib>
 
 #include <stdlib.h>
 #include <crtdbg.h>
@@ -72,7 +72,7 @@ UINT quitThread(LPVOID pParam)
 
 int main(void)
 {
-	int evaluatorCount = 10;
+	int evaluatorCount = 5;
 	int threadCount = evaluatorCount + 2;
 
 	HANDLE *handles = new HANDLE[threadCount + 1];
@@ -103,6 +103,10 @@ int main(void)
 		// endgame test
 		fen = "4k3/4r3/8/8/8/8/3PPP2/4K3 w - - 0 1";
 		break;
+	case 4:
+		// misc
+		fen = "r1bqkbnr/pppppppp/n7/8/4P3/8/PPPP1PPP/RNBQKBNR";
+		break;
 	}
 
 
@@ -110,10 +114,12 @@ int main(void)
 	p.maxDepth = 3;
 
 	// debug
-	int debugVal = 6;
+	int debugVal = 3;
 	p.windowPrint = debugVal % 2 == 0;
 	p.enginePrint = debugVal % 3 == 0;
 	p.evaluatorPrint = debugVal % 5 == 0;
+
+	srand(time(0));
 
 	handles[0] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)engineThread, &p, 0, NULL);
 	handles[1] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)windowThread, &p, 0, NULL);

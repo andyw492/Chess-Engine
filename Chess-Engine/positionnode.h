@@ -2,25 +2,30 @@
 #define positionnode_h
 
 #include <vector>
+#include <unordered_set>
 #include "position.h"
 
 using std::vector;
+using std::unordered_set;
 
 class PositionNode
 {
 public:
 
 	int depth = 0;
-
-	Position position;
-
 	bool min = false;
+	Position position;
+	PositionNode* parent = NULL;
+
+	int id = 0;
+	map<string, vector<string>> legalMoves;
+
+	bool firstVisit = true;
+	map<int, PositionNode*> children;
+	unordered_set<int> unvisited;
 
 	float value = 0;
-	bool evaluated = false;
-
-	PositionNode* parent;
-	vector<PositionNode*> children;
+	int bestChildId = 0;
 
 	string prevMove = ""; // debugging
 
