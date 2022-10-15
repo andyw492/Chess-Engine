@@ -1,9 +1,12 @@
 #define NOMINMAX
 #define _CRTDBG_MAP_ALLOC
+
 #include <windows.h>
 #include <stdio.h>
 #include <iostream>
 #include <cstdlib>
+#include <cstdio>
+#include <cinttypes>
 
 #include <stdlib.h>
 #include <crtdbg.h>
@@ -12,12 +15,15 @@
 #include "engine.h"
 #include "evaluator.h"
 #include "window.h"
+#include "position.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
 using std::cout;
 using std::endl;
 using std::string;
+
+
 
 UINT engineThread(LPVOID pParam)
 {
@@ -70,6 +76,62 @@ UINT quitThread(LPVOID pParam)
 	return 0;
 }
 
+vector<U64> fenToBoard(string fen)
+{
+	// replace numbers with spaces, e.g. "4" -> "    " (" " * 4)
+	vector<string> parts = helper::splitToVector(fen, '/');
+	vector<string> processedParts;
+	for (int i = 0; i < parts.size(); i++)
+	{
+		string partsString = parts[i];
+		string processedPartsString = "";
+		for (int j = 0; j < partsString.length(); j++)
+		{
+			if (isdigit(partsString[j]))
+			{
+				int spaceCount = partsString[j] - '0';
+				string spaceString = "        ";
+				processedPartsString += spaceString.substr(0, spaceCount);
+			}
+			else
+			{
+				processedPartsString += partsString[j];
+			}
+		}
+
+		processedParts.push_back(processedPartsString);
+	}
+
+	vector<U64> board;
+
+	for (int i = 0; i < 12; i++)
+	{
+		U64 bitBoard = 0ULL;
+		char toMatch = helper::pieces[i];
+		int square = 0;
+
+		for (string s : processedParts)
+		{
+			for (int j = 0; j < s.length(); j++)
+			{
+				if (s.at(j) == toMatch)
+				{
+					setBit(bitBoard, square);
+				}
+				square++;
+			}
+		}
+
+		board.push_back(bitBoard);
+	}
+
+	// extra info: legal castling in all four ways, no last castle, no enpassant square
+	board.push_back(15ULL);
+
+	return board;
+}
+
+
 int main(void)
 {
 	int evaluatorCount = 5;
@@ -105,10 +167,23 @@ int main(void)
 		break;
 	case 4:
 		// misc
-		fen = "r1bqkbnr/pppppppp/n7/8/4P3/8/PPPP1PPP/RNBQKBNR";
+		fen = "8/7r/8/5k1K/8/8/8/8 w - - 0 1";
 		break;
 	}
 
+	//vector<U64> board = fenToBoard(helper::splitToVector(fen, ' ')[0]);
+
+	//auto begin = std::chrono::high_resolution_clock::now();
+	//vector<vector<U64>> nextPositions = helper::getNextPositions(board, true);
+	//auto end = std::chrono::high_resolution_clock::now();
+
+	//for (auto position : nextPositions)
+	//{
+	//	printf("-----------------------\n");
+	//	helper::printBoard(position);
+	//}
+
+	//printf("%d legal moves found in %.3f ms\n", nextPositions.size(), float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
 
 	p.initialFen = helper::splitToVector(fen, ' ')[0];
 	p.maxDepth = 3;
