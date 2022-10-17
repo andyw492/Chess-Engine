@@ -1,19 +1,10 @@
-﻿  helper.cpp
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(34): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(38): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(248): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(592): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(909): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(947): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(991): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1134): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1281): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1315): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1372): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1515): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1777): warning C4018: '<': signed/unsigned mismatch
+﻿  main.cpp
+c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(84): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(88): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(115): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(198): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
 LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/FORCE' specification
-evaluator.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored
+worker.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored
 helper.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored
 main.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored
 window.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored

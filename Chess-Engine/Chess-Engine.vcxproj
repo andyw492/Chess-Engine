@@ -133,14 +133,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="engine.cpp" />
-    <ClCompile Include="evaluator.cpp" />
+    <ClCompile Include="worker.cpp" />
     <ClCompile Include="helper.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine.h" />
-    <ClInclude Include="evaluator.h" />
+    <ClInclude Include="worker.h" />
     <ClInclude Include="helper.h" />
     <ClInclude Include="parameters.h" />
     <ClInclude Include="position.h" />

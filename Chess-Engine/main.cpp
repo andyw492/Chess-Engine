@@ -13,7 +13,7 @@
 
 #include "parameters.h"
 #include "engine.h"
-#include "evaluator.h"
+#include "worker.h"
 #include "window.h"
 #include "position.h"
 
@@ -38,16 +38,16 @@ UINT engineThread(LPVOID pParam)
 	return e.start(pParam);
 }
 
-UINT evaluatorThreads(LPVOID pParam)
+UINT workerThreads(LPVOID pParam)
 {
 	Parameters *p = ((Parameters*)pParam);
 
-	bool evaluatorPrint = false;
+	bool workerPrint = false;
 	WaitForSingleObject(p->mutex, INFINITE);
-	evaluatorPrint = p->evaluatorPrint;
+	workerPrint = p->workerPrint;
 	ReleaseMutex(p->mutex);
 
-	Evaluator e(evaluatorPrint);
+	Worker e(workerPrint);
 	return e.start(pParam);
 }
 
@@ -134,8 +134,8 @@ vector<U64> fenToBoard(string fen)
 
 int main(void)
 {
-	int evaluatorCount = 5;
-	int threadCount = evaluatorCount + 2;
+	int workerCount = 10;
+	int threadCount = workerCount + 2;
 
 	HANDLE *handles = new HANDLE[threadCount + 1];
 	Parameters p;
@@ -167,7 +167,7 @@ int main(void)
 		break;
 	case 4:
 		// misc
-		fen = "8/7r/8/5k1K/8/8/8/8 w - - 0 1";
+		fen = "7k/8/6Q1/8/8/8/8/6R1 w - - 0 1";
 		break;
 	}
 
@@ -184,15 +184,16 @@ int main(void)
 	//}
 
 	//printf("%d legal moves found in %.3f ms\n", nextPositions.size(), float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
+	//return 0;
 
 	p.initialFen = helper::splitToVector(fen, ' ')[0];
-	p.maxDepth = 3;
+	p.maxDepth = 4;
 
 	// debug
 	int debugVal = 3;
 	p.windowPrint = debugVal % 2 == 0;
 	p.enginePrint = debugVal % 3 == 0;
-	p.evaluatorPrint = debugVal % 5 == 0;
+	p.workerPrint = debugVal % 5 == 0;
 
 	srand(time(0));
 
@@ -200,9 +201,9 @@ int main(void)
 	handles[1] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)windowThread, &p, 0, NULL);
 	handles[2] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)quitThread, &p, 0, NULL);
 
-	for (int i = 3; i < 3 + evaluatorCount; i++)
+	for (int i = 3; i < 3 + workerCount; i++)
 	{
-		handles[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)evaluatorThreads, &p, 0, NULL);
+		handles[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)workerThreads, &p, 0, NULL);
 	}
 	
 

@@ -38,8 +38,6 @@ public:
 	void startClock();
 	void printTime();
 
-	double evaluate(PositionNode* node);
-
 	void deletePositionTree(PositionNode* node);
 
 	UINT start(LPVOID pParam);

@@ -3,10 +3,12 @@
 
 #include <vector>
 #include <unordered_set>
+#include <queue>
 #include "position.h"
 
 using std::vector;
 using std::unordered_set;
+using std::queue;
 
 class PositionNode
 {
@@ -14,22 +16,23 @@ public:
 
 	int depth = 0;
 	bool min = false;
-	Position position;
+	vector<U64> position;
 	PositionNode* parent = NULL;
 
 	int id = 0;
-	map<string, vector<string>> legalMoves;
+	vector<vector<U64>> nextPositions;
 
 	bool firstVisit = true;
-	map<int, PositionNode*> children;
-	unordered_set<int> unvisited;
+	vector<PositionNode*> children;
+	queue<int> unvisited;
+
+	int lastVisited = -1;
 
 	float value = 0;
-	int bestChildId = 0;
+	int bestChildId = -1;
 
-	string prevMove = ""; // debugging
-
-	int deleteIndex = 0; // freeing memory
+	float alpha = 0;
+	float beta = 0;
 };
 
 #endif

@@ -1,5 +1,5 @@
-#ifndef evaluator_h
-#define evaluator_h
+#ifndef worker_h
+#define worker_h
 
 #define NOMINMAX
 #include <windows.h>
@@ -19,11 +19,13 @@ using std::string;
 using std::min;
 using std::max;
 
-class Evaluator
+class Worker
 {
 public:
 
-	Evaluator(bool evaluatorPrint);
+	Worker(bool workerPrint);
+
+	double evaluate(PositionNode* node);
 
 	UINT start(LPVOID pParam);
 

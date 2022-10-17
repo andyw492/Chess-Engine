@@ -20,176 +20,15 @@ void Engine::printTime()
 	lastTime = total;
 }
 
-double Engine::evaluate(PositionNode* node)
-{
-	// find the value for the base position (legal moves are made from this position)
-	// calculate value as (white total piece value - black total piece value)
-	double baseValue = 0;
-	for (int y = 0; y < 8; y++)
-	{
-		for (int x = 0; x < 8; x++)
-		{
-			char piece = node->position.board[y][x];
-			float pieceValue = (piece < 97 ? 1 : -1);
-			switch (piece)
-			{
-			case 'K':
-			case 'k':
-				pieceValue *= 10000; break;
-	
-			case 'Q':
-			case 'q':
-				pieceValue *= 9; break;
-	
-			case 'R':
-			case 'r':
-				pieceValue *= 5; break;
-	
-			case 'B':
-			case 'b':
-				pieceValue *= 3.2; break;
-	
-			case 'N':
-			case 'n':
-				pieceValue *= 3; break;
-	
-			case 'P':
-			case 'p':
-				pieceValue *= 1; break;
-	
-			case ' ':
-				pieceValue = 0; break;
-	
-			default:
-				cout << "invalid piece" << endl; break;
-			}
-	
-			baseValue += pieceValue;
-		}
-	}
 
-	double bestValue = (node->min ? FLT_MAX : -FLT_MAX);
-
-	// find the best value by simulating each legal move and finding the value change from the move
-	for (auto move : node->legalMoves)
-	{
-		char movingPiece = node->position.board[move.first.at(0) - '0'][move.first.at(1) - '0'];
-		bool pawnMove = (movingPiece == 'P') || (movingPiece == 'p');
-
-		for (string dest : move.second)
-		{
-			double valueChange = (node->min ? -1 : 1);
-
-			int y = dest.at(0) - '0';
-			int x = dest.at(1) - '0';
-			char piece = node->position.board[y][x];
-			switch (piece)
-			{
-			case 'K':
-			case 'k':
-				valueChange *= DBL_MAX; break;
-				
-			case 'Q':
-			case 'q':
-				valueChange *= 9; break;
-				
-			case 'R':
-			case 'r':
-				valueChange *= 5; break;
-				
-			case 'B':
-			case 'b':
-				valueChange *= 3.2; break;
-				
-			case 'N':
-			case 'n':
-				valueChange *= 3; break;
-				
-			case 'P':
-			case 'p':
-				valueChange *= 1; break;
-
-			case ' ':
-				// check for en passant
-				bool whiteEnPassant = pawnMove && !node->min && node->position.board[y + 1][x] == 'p';
-				bool blackEnPassant = pawnMove && node->min && node->position.board[y - 1][x] == 'P';
-				if (whiteEnPassant || blackEnPassant)
-				{
-					valueChange *= 1;
-				}
-				else
-				{
-					valueChange = 0;
-				}
-
-				break;
-			}
-
-			double newValue = baseValue + valueChange;
-			bestValue = (node->min ? min(bestValue, newValue) : max(bestValue, newValue));
-		}
-	}
-
-	// slightly randomize value to prevent repeating moves
-	return bestValue + ((double)rand() / RAND_MAX) / 100;
-}
-
-//double Engine::evaluate(Position position)
-//{
-//	// evaluation: calculate value as (white total piece value - black total piece value)
-//	double totalValue = 0;
-//	for (int y = 0; y < 8; y++)
-//	{
-//		for (int x = 0; x < 8; x++)
-//		{
-//			char piece = position.board[y][x];
-//			float pieceValue = (piece < 97 ? 1 : -1);
-//			switch (piece)
-//			{
-//			case 'K':
-//			case 'k':
-//				pieceValue *= 10000; break;
-//
-//			case 'Q':
-//			case 'q':
-//				pieceValue *= 9; break;
-//
-//			case 'R':
-//			case 'r':
-//				pieceValue *= 5; break;
-//
-//			case 'B':
-//			case 'b':
-//				pieceValue *= 3.2; break;
-//
-//			case 'N':
-//			case 'n':
-//				pieceValue *= 3; break;
-//
-//			case 'P':
-//			case 'p':
-//				pieceValue *= 1; break;
-//
-//			case ' ':
-//				pieceValue = 0; break;
-//
-//			default:
-//				cout << "invalid piece" << endl; break;
-//			}
-//
-//			totalValue += pieceValue;
-//		}
-//	}
-//
-//	// slightly randomize value to prevent repeating moves
-//	return totalValue + ((double)rand() / RAND_MAX) / 100;
-//}
 
 void Engine::deletePositionTree(PositionNode* node)
 {
-	for (auto child : node->children)
+	if (node == NULL) { return; }
+
+	for (PositionNode* child : node->children)
 	{
-		deletePositionTree(child.second);
+		deletePositionTree(child);
 	}
 
 	delete node;
@@ -238,17 +77,301 @@ UINT Engine::start(LPVOID pParam)
 		currentPosition = p->currentPosition;
 		ReleaseMutex(p->mutex);
 
-		vector<U64> board = helper::positionToU64(currentPosition);
-		vector<vector<U64>> nextPositions = helper::getNextPositions(board, false);
+		PositionNode* root = new PositionNode;
+		root->position = helper::positionToU64(currentPosition);
+		root->min = true;
+		root->value = FLT_MAX;
+		root->id = -1;
+		root->nextPositions = helper::getNextPositions(root->position, false);
+		root->alpha = -FLT_MAX;
+		root->beta = FLT_MAX;
 
-		vector<U64> bestPosition = nextPositions[0];
+		// check if engine lost
+		if (root->nextPositions.size() == 0)
+		{
+			if (helper::inCheck(root->position, false))
+			{
+				WaitForSingleObject(p->mutex, INFINITE);
+				p->gameResult = "you won!!";
+				ReleaseMutex(p->mutex);
+			}
+			else
+			{
+				WaitForSingleObject(p->mutex, INFINITE);
+				p->gameResult = "stalemate...";
+				ReleaseMutex(p->mutex);
+			}
+
+			break;
+		}
+
+		for (vector<U64> nextPosition : root->nextPositions)
+		{
+			PositionNode* newNode = new PositionNode;
+			newNode->depth = root->depth + 1;
+			newNode->min = !(root->min);
+			newNode->position = nextPosition;
+			newNode->parent = root;
+			newNode->value = (newNode->min ? FLT_MAX : -FLT_MAX);
+
+			int id = -1;
+			WaitForSingleObject(p->mutex, INFINITE);
+			id = p->nodeId;
+			p->nodeId++;
+			ReleaseMutex(p->mutex);
+
+			newNode->id = id;
+			root->unvisited.push(id);
+
+			root->children.push_back(newNode);
+		}
+
+		//if (dpr)
+		//{
+		//	system("cls");
+		//	cout << "----------------- ENGINE -----------------\n" << endl;
+		//	for (auto i : legalMoves)
+		//	{
+		//		cout << i.first << ": ";
+		//		for (int j = 0; j < i.second.size(); j++)
+		//		{
+		//			cout << i.second[j] << " ";
+		//		}
+		//		cout << endl;
+		//	}
+		//	cout << endl;
+		//}
+
+#pragma endregion
+
+		vector<U64> bestPosition;
+
+		float totalFirstVisit = 0;
+		float totalLargeWaited = 0;
+		float totalSmallWaited = 0;
+		float totalFindValue = 0;
+		float totalMiscValue = 0;
+		int smallWaitedCount = 0;
+		int largeWaitedCount = 0;
+
+		auto begin = std::chrono::high_resolution_clock::now();
+
+		PositionNode* currentNode = root;
+		int id = 0;
+
+		float totalWorkerTime = 0;
+		float totalTime = 0;
+
+		while (currentNode != NULL)
+		{
+			auto point1 = std::chrono::high_resolution_clock::now();
+
+			WaitForSingleObject(p->mutex, INFINITE);
+			windowClosed = p->windowClosed;
+			gameResult = p->gameResult;
+			ReleaseMutex(p->mutex);
+
+			if (windowClosed || gameResult.length() > 0) { break; }
+
+			bool pruneChildren = false;
+
+			if (currentNode->depth == maxDepth - 1)
+			{
+				if (currentNode->depth > 0 && ((currentNode->parent->min && currentNode->value < currentNode->parent->value) ||
+					(!currentNode->parent->min && currentNode->value > currentNode->parent->value)))
+				{
+					currentNode->parent->value = currentNode->value;
+					currentNode->parent->bestChildId = currentNode->id;
+				}
+				currentNode = currentNode->parent;
+			}
+
+			// if the node has no value, then this is the first visit to this node and its children are not ready to visit
+			if (currentNode->value == FLT_MAX || currentNode->value == -FLT_MAX)
+			{
+				for (PositionNode* child : currentNode->children)
+				{
+					WaitForSingleObject(p->mutex, INFINITE);
+					p->toExpand.push((char*)child);
+					int stackSize = p->toExpand.size();
+					int expandedSize = p->expanded.size();
+					ReleaseMutex(p->mutex);
+
+					if (dpr && currentNode->depth == 1)
+					{
+						printf("toExpand size: %d expanded size: %d\n", stackSize, expandedSize);
+					}
+				}
+			}
+
+			// if the node has a value, then it has visited a child who set a value for this node
+			else
+			{
+				if (!currentNode->min)
+				{
+					currentNode->alpha = max(currentNode->alpha, currentNode->value);
+				}
+				else
+				{
+					currentNode->beta = min(currentNode->beta, currentNode->value);
+				}
+
+				pruneChildren = currentNode->beta <= currentNode->alpha;
+			}
+
+			// if all children have been visited or pruned
+			if (currentNode->unvisited.size() == 0 || pruneChildren)
+			{
+				if (currentNode->depth > 0 && ((currentNode->parent->min && currentNode->value < currentNode->parent->value) ||
+					(!currentNode->parent->min && currentNode->value > currentNode->parent->value)))
+				{
+					currentNode->parent->value = currentNode->value;
+					currentNode->parent->bestChildId = currentNode->id;
+				}
+
+				currentNode = currentNode->parent;
+			}
+
+
+			// otherwise, evaluate next child
+			else if (currentNode->unvisited.size() > 0)
+			{
+				int nextNodeId = currentNode->unvisited.front();
+				currentNode->unvisited.pop();
+
+				PositionNode* nextNode = nullptr;
+
+				auto workerPoint1 = std::chrono::high_resolution_clock::now();
+				while (nextNode == nullptr)
+				{
+					WaitForSingleObject(p->mutex, INFINITE);
+					nextNode = (PositionNode*)p->expanded[nextNodeId];
+					windowClosed = p->windowClosed;
+					gameResult = p->gameResult;
+					ReleaseMutex(p->mutex);
+
+					if (windowClosed || gameResult.length() > 0) { break; }
+				}
+				auto workerPoint2 = std::chrono::high_resolution_clock::now();
+				totalWorkerTime += float(std::chrono::duration_cast<std::chrono::nanoseconds>(workerPoint2 - workerPoint1).count()) / 1e6;
+
+				WaitForSingleObject(p->mutex, INFINITE);
+				p->expanded.erase(nextNodeId);
+				ReleaseMutex(p->mutex);
+
+				nextNode->alpha = currentNode->alpha;
+				nextNode->beta = currentNode->beta;
+				currentNode = nextNode;
+			}
+
+			auto point2 = std::chrono::high_resolution_clock::now();
+			totalTime += float(std::chrono::duration_cast<std::chrono::nanoseconds>(point2 - point1).count()) / 1e6;
+		}
+
+		if (dpr)
+		{
+			//printf("best child id %d\n", root->bestChildId);
+			//printf("best child value %d\n", root->children[root->bestChildId]->value);
+			//for (auto child : root->children)
+			//{
+			//	printf("root child id %d\n", child.first);
+			//}
+		}
+
+		if (dpr)
+		{
+			//printf("small %f ms; large %f ms\n", totalSmallWaited, totalLargeWaited);
+			//printf("small count %d; large count %d\n", smallWaitedCount, largeWaitedCount);
+			//printf("firstvisit %f\n", totalFirstVisit);
+			//printf("findvalue %f\n", totalFindValue);
+			//printf("miscvalue %f\n", totalMiscValue);
+
+			printf("engine time %.3f ms\n", totalTime - totalWorkerTime);
+			printf("worker time %.3f ms\n", totalWorkerTime);
+		}
+
+		bestPosition = root->children[root->bestChildId]->position;
+
+		currentNode = root;
+		for (int i = 0; i < maxDepth; i++)
+		{
+			if (currentNode == NULL) { break; }
+
+			printf("depth %d\n", i);// best value %f id %d bestchildid %d\n", currentNode->depth, bestValue, currentNode->id, bestChildId);
+			helper::printBoard(currentNode->position);
+			printf("---------------------------\n");
+
+			for (PositionNode* child : currentNode->children)
+			{
+				if (child->id == currentNode->bestChildId)
+				{
+					currentNode = child;
+				}
+			}
+		}
+
+		auto end = std::chrono::high_resolution_clock::now();
+
+		if (dpr || true)
+		{
+			printf("engine move found in %.3f ms\n", float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
+		}
+
+		begin = std::chrono::high_resolution_clock::now();
+
+		deletePositionTree(root);
+
+		WaitForSingleObject(p->mutex, INFINITE);
+		while (!p->toExpand.empty()) { p->toExpand.pop(); }
+		p->expanded.clear();
+		p->nodeId = 0;
+		ReleaseMutex(p->mutex);
+
+		end = std::chrono::high_resolution_clock::now();
+
+		if (dpr)
+		{
+			printf("engine cleanup done in %.3f ms\n", float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
+		}
 
 		Position bestPositionWindow = helper::U64ToPosition(bestPosition);
+
+		//if (dpr)
+		//{
+		//	cout << "sending best position:" << endl;
+		//	for (int a = 0; a < 8; a++)
+		//	{
+		//		for (int b = 0; b < 8; b++)
+		//		{
+		//			cout << bestPositionWindow.board[a][b] << " ";
+		//		}
+		//		cout << endl;
+		//	}
+		//}
 
 		// send the resulting position to parameters
 		WaitForSingleObject(p->mutex, INFINITE);
 		p->currentPosition = bestPositionWindow;
 		ReleaseMutex(p->mutex);
+
+		// check if player lost
+		vector<vector<U64>> nextPositionsFromBestPosition = helper::getNextPositions(bestPosition, true);
+
+		if (nextPositionsFromBestPosition.size() == 0)
+		{
+			if (helper::inCheck(bestPosition, true))
+			{
+				WaitForSingleObject(p->mutex, INFINITE);
+				p->gameResult = "you lost!!";
+				ReleaseMutex(p->mutex);
+			}
+			else
+			{
+				WaitForSingleObject(p->mutex, INFINITE);
+				p->gameResult = "stalemate...";
+				ReleaseMutex(p->mutex);
+			}
+		}
 
 		// indicate that it is the player's move
 		WaitForSingleObject(p->mutex, INFINITE);

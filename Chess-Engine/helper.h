@@ -30,6 +30,7 @@
 #define LASTCASTLEWHITEQUEENSIDE 14
 #define LASTCASTLEBLACKKINGSIDE 13
 #define LASTCASTLEBLACKQUEENSIDE 12
+#define LASTCAPTURELSB 16
 
 #define COL0BITBOARD 0x0101010101010101
 #define COL1BITBOARD 0x0202020202020202
@@ -72,7 +73,7 @@ namespace helper
 
 	map<string, vector<string>> getLegalMoves(Position position, bool whiteToMove);
 
-	bool inCheck(char board[8][8], bool whiteToMove);
+	bool inCheck(vector<U64>, bool whiteToMove);
 
 	vector<U64> positionToU64(Position position);
 

@@ -35,14 +35,16 @@ public:
 	unordered_map<int, char*> expanded;
 
 	vector<float> values;
-	bool evaluatorError = false;
+	bool workerError = false;
 
 	int maxDepth = 0;
 	string bestMove = "";
 
+	int nodeId = 0;
+
 	bool windowPrint = false;
 	bool enginePrint = false;
-	bool evaluatorPrint = false;
+	bool workerPrint = false;
 
 	string gameResult = "";
 };

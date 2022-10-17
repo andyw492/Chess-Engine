@@ -1337,313 +1337,285 @@ map<string, vector<string>> helper::getLegalMoves(Position position, bool whiteT
 	return legalMoves;
 }
  
-// (copied from getLegalMoves())
+// (copied from getNextPositions())
 // if whiteToMove == true, then returns true if white is in check
-bool helper::inCheck(char board[8][8], bool whiteToMove)
+bool helper::inCheck(vector<U64> board, bool whiteToMove)
 {
-	int i = -1;
-	int j = -1;
-	for (int y = 0; y < 8; y++)
+	U64 dangerMap = 0ULL;
+
+	// find ally/enemy piece positions
+	U64 allyPieces = 0ULL;
+	U64 enemyPieces = 0ULL;
+	if (whiteToMove)
 	{
-		for (int x = 0; x < 8; x++)
+		for (int j = 0; j < 6; j++)
 		{
-			if ((whiteToMove && board[y][x] == 'K') || (!whiteToMove && board[y][x] == 'k'))
+			U64 currentBoard = board[j];
+			for (int square = 0; square < 64; square++)
 			{
-				i = y;
-				j = x;
-				y = 8; x = 8; // break from loops
+				if (getBit(currentBoard, square))
+				{
+					setBit(allyPieces, square);
+				}
+			}
+		}
+
+		for (int j = 6; j < 12; j++)
+		{
+			U64 currentBoard = board[j];
+			for (int square = 0; square < 64; square++)
+			{
+				if (getBit(currentBoard, square))
+				{
+					setBit(enemyPieces, square);
+				}
+			}
+		}
+	}
+	else
+	{
+		for (int j = 6; j < 12; j++)
+		{
+			U64 currentBoard = board[j];
+			for (int square = 0; square < 64; square++)
+			{
+				if (getBit(currentBoard, square))
+				{
+					setBit(allyPieces, square);
+				}
+			}
+		}
+
+		for (int j = 0; j < 6; j++)
+		{
+			U64 currentBoard = board[j];
+			for (int square = 0; square < 64; square++)
+			{
+				if (getBit(currentBoard, square))
+				{
+					setBit(enemyPieces, square);
+				}
 			}
 		}
 	}
 
-	// check if the king can be captured by each type of piece
-	if (whiteToMove)
+	int pieceStart = (whiteToMove ? 0 : 6);
+	int pieceEnd = (whiteToMove ? 6 : 12);
+
+	// find all possible moves (legal or not) from the current position
+	for (int i = pieceStart; i < pieceEnd; i++)
 	{
-		// pawns
-		if (j > 0 && board[i - 1][j - 1] == 'p') { return true; }
-		if (j < 7 && board[i - 1][j + 1] == 'p') { return true; }
-
-		// knights
-		vector<vector<int>> knightPos;
-		knightPos.push_back({ i - 2, j - 1 }); knightPos.push_back({ i - 2, j + 1 });
-		knightPos.push_back({ i - 1, j - 2 }); knightPos.push_back({ i - 1, j + 2 });
-		knightPos.push_back({ i + 1, j - 2 }); knightPos.push_back({ i + 1, j + 2 });
-		knightPos.push_back({ i + 2, j - 1 }); knightPos.push_back({ i + 2, j + 1 });
-		for (int k = 0; k < knightPos.size(); k++)
+		char currentPiece = helper::pieces[i];
+		switch (currentPiece)
 		{
-			int y = knightPos[k][0];
-			int x = knightPos[k][1];
-			if (y >= 0 && y <= 7 && x >= 0 && x <= 7 && board[y][x] == 'n') { return true; }
+		case 'P':
+		case 'p':
+		{
+			U64 enemyPieceBitBoard = (currentPiece == 'P' ? board[BLACKPAWN] : board[WHITEPAWN]);
+
+			for (int startSquare = 0; startSquare < 64; startSquare++)
+			{
+				if (getBit(enemyPieceBitBoard, startSquare))
+				{
+					int moveAmount[4] = { -7, -9 };
+
+					if (!whiteToMove)
+					{
+						for (int j = 0; j < 4; j++)
+						{
+							moveAmount[j] *= -1;
+						}
+					}
+
+					int enpassantSquare = getIntFromBits(board[BOARDEXTRA], ENPASSANTLSB, ENPASSANTLSB + 7);
+
+					if ((whiteToMove && getBit(COL7BITBOARD, startSquare)) || (!whiteToMove && getBit(COL0BITBOARD, startSquare))) { moveAmount[2] = 0; }
+					if ((whiteToMove && getBit(COL0BITBOARD, startSquare)) || (!whiteToMove && getBit(COL7BITBOARD, startSquare))) { moveAmount[3] = 0; }
+
+					for (int j = 2; j < 4; j++)
+					{
+						int moveSquare = startSquare + moveAmount[j];
+						if (moveAmount[j] == 0) { continue; }
+
+						setBit(dangerMap, moveSquare);
+					}
+				}
+			}
+
+			break;
 		}
 
-		// bishops, rooks, queen
-#pragma region
-				// top left
-		int y = i - 1;
-		int x = j - 1;
-		while (y >= 0 && x >= 0 && (board[y][x] == ' ' || board[y][x] == 'b' || board[y][x] == 'q'))
+		case 'N':
+		case 'n':
 		{
-			if (board[y][x] == 'b' || board[y][x] == 'q') { return true; break; }
-			y--;
-			x--;
+			U64 enemyPieceBitBoard = (currentPiece == 'N' ? board[BLACKKNIGHT] : board[WHITEKNIGHT]);
+
+			for (int startSquare = 0; startSquare < 64; startSquare++)
+			{
+				if (getBit(enemyPieceBitBoard, startSquare))
+				{
+					int toMove[8] = { startSquare - 17, startSquare - 15, startSquare - 10, startSquare - 6, startSquare + 6, startSquare + 10, startSquare + 15, startSquare + 17 };
+
+					int knightPos = 0;
+
+					if (getBit(COL0BITBOARD, startSquare)) { knightPos += (1 << 0); }
+					if (getBit(COL1BITBOARD, startSquare)) { knightPos += (1 << 1); }
+					if (getBit(COL6BITBOARD, startSquare)) { knightPos += (1 << 2); }
+					if (getBit(COL7BITBOARD, startSquare)) { knightPos += (1 << 3); }
+					if (getBit(ROW0BITBOARD, startSquare)) { knightPos += (1 << 4); }
+					if (getBit(ROW1BITBOARD, startSquare)) { knightPos += (1 << 5); }
+					if (getBit(ROW6BITBOARD, startSquare)) { knightPos += (1 << 6); }
+					if (getBit(ROW7BITBOARD, startSquare)) { knightPos += (1 << 7); }
+
+					if (getBit(knightPos, 0) || getBit(knightPos, 4) || getBit(knightPos, 5)) { toMove[0] = -1; }
+					if (getBit(knightPos, 3) || getBit(knightPos, 4) || getBit(knightPos, 5)) { toMove[1] = -1; }
+					if (getBit(knightPos, 0) || getBit(knightPos, 1) || getBit(knightPos, 4)) { toMove[2] = -1; }
+					if (getBit(knightPos, 2) || getBit(knightPos, 3) || getBit(knightPos, 4)) { toMove[3] = -1; }
+					if (getBit(knightPos, 0) || getBit(knightPos, 1) || getBit(knightPos, 7)) { toMove[4] = -1; }
+					if (getBit(knightPos, 2) || getBit(knightPos, 3) || getBit(knightPos, 7)) { toMove[5] = -1; }
+					if (getBit(knightPos, 0) || getBit(knightPos, 6) || getBit(knightPos, 7)) { toMove[6] = -1; }
+					if (getBit(knightPos, 3) || getBit(knightPos, 6) || getBit(knightPos, 7)) { toMove[7] = -1; }
+
+					for (int moveSquare : toMove)
+					{
+						if (moveSquare == -1) { continue; }
+
+						setBit(dangerMap, moveSquare);
+					}
+				}
+			}
+
+			break;
 		}
 
-		// top right
-		y = i - 1;
-		x = j + 1;
-		while (y >= 0 && x <= 7 && (board[y][x] == ' ' || board[y][x] == 'b' || board[y][x] == 'q'))
+		case 'B':
+		case 'b':
 		{
-			if (board[y][x] == 'b' || board[y][x] == 'q') { return true; break; }
-			y--;
-			x++;
+			U64 enemyPieceBitBoard = (currentPiece == 'B' ? board[BLACKBISHOP] : board[WHITEBISHOP]);
+
+			for (int startSquare = 0; startSquare < 64; startSquare++)
+			{
+				if (getBit(enemyPieceBitBoard, startSquare))
+				{
+					int moveAmount[4] = { -9, -7, 7, 9 };
+
+					for (int j = 0; j < 4; j++)
+					{
+						int moveSquare = startSquare;
+
+						while (true)
+						{
+							if (j == 0 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
+							if (j == 1 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
+							if (j == 2 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+							if (j == 3 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+
+							moveSquare += moveAmount[j];
+
+							setBit(dangerMap, moveSquare);
+						}
+					}
+
+
+				}
+			}
+
+			break;
 		}
 
-		// bottom left
-		y = i + 1;
-		x = j - 1;
-		while (y <= 7 && x >= 0 && (board[y][x] == ' ' || board[y][x] == 'b' || board[y][x] == 'q'))
+		case 'R':
+		case 'r':
 		{
-			if (board[y][x] == 'b' || board[y][x] == 'q') { return true; break; }
-			y++;
-			x--;
+			U64 enemyPieceBitBoard = (currentPiece == 'R' ? board[BLACKROOK] : board[WHITEROOK]);
+
+			for (int startSquare = 0; startSquare < 64; startSquare++)
+			{
+				if (getBit(enemyPieceBitBoard, startSquare))
+				{
+					int moveAmount[4] = { -8, -1, 1, 8 };
+
+					for (int j = 0; j < 4; j++)
+					{
+						int moveSquare = startSquare;
+
+						while (true)
+						{
+							if (j == 0 && getBit(ROW0BITBOARD, moveSquare)) { break; }
+							if (j == 1 && getBit(COL0BITBOARD, moveSquare)) { break; }
+							if (j == 2 && getBit(COL7BITBOARD, moveSquare)) { break; }
+							if (j == 3 && getBit(ROW7BITBOARD, moveSquare)) { break; }
+
+							moveSquare += moveAmount[j];
+
+							setBit(dangerMap, moveSquare);
+						}
+					}
+
+
+				}
+			}
+
+			break;
 		}
 
-		// bottom right
-		y = i + 1;
-		x = j + 1;
-		while (y <= 7 && x <= 7 && (board[y][x] == ' ' || board[y][x] == 'b' || board[y][x] == 'q'))
+		case 'Q':
+		case 'q':
 		{
-			if (board[y][x] == 'b' || board[y][x] == 'q') { return true; break; }
-			y++;
-			x++;
+			U64 enemyPieceBitBoard = (currentPiece == 'Q' ? board[BLACKQUEEN] : board[WHITEQUEEN]);
+
+			for (int startSquare = 0; startSquare < 64; startSquare++)
+			{
+				if (getBit(enemyPieceBitBoard, startSquare))
+				{
+					int moveAmount[8] = { -9, -7, 7, 9, -8, -1, 1, 8 };
+
+					for (int j = 0; j < 8; j++)
+					{
+						int moveSquare = startSquare;
+
+						while (true)
+						{
+							if (j == 0 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
+							if (j == 1 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
+							if (j == 2 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+							if (j == 3 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+							if (j == 4 && getBit(ROW0BITBOARD, moveSquare)) { break; }
+							if (j == 5 && getBit(COL0BITBOARD, moveSquare)) { break; }
+							if (j == 6 && getBit(COL7BITBOARD, moveSquare)) { break; }
+							if (j == 7 && getBit(ROW7BITBOARD, moveSquare)) { break; }
+
+							moveSquare += moveAmount[j];
+
+							setBit(dangerMap, moveSquare);
+
+						}
+					}
+
+
+				}
+			}
+
+			break;
 		}
 
-		// top
-		y = i - 1;
-		x = j;
-		while (y >= 0 && (board[y][x] == ' ' || board[y][x] == 'r' || board[y][x] == 'q'))
-		{
-			if (board[y][x] == 'r' || board[y][x] == 'q') { return true; break; }
-			y--;
+
+		default:
+			break;
+
 		}
-
-		// left
-		y = i;
-		x = j - 1;
-		while (x >= 0 && (board[y][x] == ' ' || board[y][x] == 'r' || board[y][x] == 'q'))
-		{
-			if (board[y][x] == 'r' || board[y][x] == 'q') { return true; break; }
-			x--;
-		}
-
-		// right
-		y = i;
-		x = j + 1;
-		while (x <= 7 && (board[y][x] == ' ' || board[y][x] == 'r' || board[y][x] == 'q'))
-		{
-			if (board[y][x] == 'r' || board[y][x] == 'q') { return true; break; }
-			x++;
-		}
-
-		// bottom
-		y = i + 1;
-		x = j;
-		while (y <= 7 && (board[y][x] == ' ' || board[y][x] == 'r' || board[y][x] == 'q'))
-		{
-			if (board[y][x] == 'r' || board[y][x] == 'q') { return true; break; }
-			y++;
-		}
-#pragma endregion
-
-		// king
-#pragma region
-				// top left
-		y = i - 1;
-		x = j - 1;
-		if (y >= 0 && x >= 0 && (board[y][x] == 'k')) { return true; }
-
-		// top
-		y = i - 1;
-		x = j;
-		if (y >= 0 && (board[y][x] == 'k')) { return true; }
-
-		// top right
-		y = i - 1;
-		x = j + 1;
-		if (y >= 0 && x <= 7 && (board[y][x] == 'k')) { return true; }
-
-		// left
-		y = i;
-		x = j - 1;
-		if (x >= 0 && (board[y][x] == 'k')) { return true; }
-
-		// right
-		y = i;
-		x = j + 1;
-		if (x <= 7 && (board[y][x] == 'k')) { return true; }
-
-		// bottom left
-		y = i + 1;
-		x = j - 1;
-		if (y <= 7 && x >= 0 && (board[y][x] == 'k')) { return true; }
-
-		// bottom
-		y = i + 1;
-		x = j;
-		if (y <= 7 && (board[y][x] == 'k')) { return true; }
-
-		// bottom right
-		y = i + 1;
-		x = j + 1;
-		if (y <= 7 && x <= 7 && (board[y][x] == 'k')) { return true; }
-#pragma endregion
 
 	}
 
-	else // black to move
+	int kingSquare = -1;
+	for (int i = 0; i < 64; i++)
 	{
-		// pawns
-		if (j > 0 && board[i + 1][j - 1] == 'P') { return true; }
-		if (j < 7 && board[i + 1][j + 1] == 'P') { return true; }
-
-		// knights
-		vector<vector<int>> knightPos;
-		knightPos.push_back({ i - 2, j - 1 }); knightPos.push_back({ i - 2, j + 1 });
-		knightPos.push_back({ i - 1, j - 2 }); knightPos.push_back({ i - 1, j + 2 });
-		knightPos.push_back({ i + 1, j - 2 }); knightPos.push_back({ i + 1, j + 2 });
-		knightPos.push_back({ i + 2, j - 1 }); knightPos.push_back({ i + 2, j + 1 });
-		for (int k = 0; k < knightPos.size(); k++)
+		if ((whiteToMove && getBit(board[WHITEKING], i)) || (!whiteToMove && getBit(board[BLACKKING], i)))
 		{
-			int y = knightPos[k][0];
-			int x = knightPos[k][1];
-			if (y >= 0 && y <= 7 && x >= 0 && x <= 7 && board[y][x] == 'N') { return true; }
+			kingSquare = i;
 		}
-
-		// bishops, rooks, queen
-#pragma region
-				// top left
-		int y = i - 1;
-		int x = j - 1;
-		while (y >= 0 && x >= 0 && (board[y][x] == ' ' || board[y][x] == 'B' || board[y][x] == 'Q'))
-		{
-			if (board[y][x] == 'B' || board[y][x] == 'Q') { return true; break; }
-			y--;
-			x--;
-		}
-
-		// top right
-		y = i - 1;
-		x = j + 1;
-		while (y >= 0 && x <= 7 && (board[y][x] == ' ' || board[y][x] == 'B' || board[y][x] == 'Q'))
-		{
-			if (board[y][x] == 'B' || board[y][x] == 'Q') { return true; break; }
-			y--;
-			x++;
-		}
-
-		// bottom left
-		y = i + 1;
-		x = j - 1;
-		while (y <= 7 && x >= 0 && (board[y][x] == ' ' || board[y][x] == 'B' || board[y][x] == 'Q'))
-		{
-			if (board[y][x] == 'B' || board[y][x] == 'Q') { return true; break; }
-			y++;
-			x--;
-		}
-
-		// bottom right
-		y = i + 1;
-		x = j + 1;
-		while (y <= 7 && x <= 7 && (board[y][x] == ' ' || board[y][x] == 'B' || board[y][x] == 'Q'))
-		{
-			if (board[y][x] == 'B' || board[y][x] == 'Q') { return true; break; }
-			y++;
-			x++;
-		}
-
-		// top
-		y = i - 1;
-		x = j;
-		while (y >= 0 && (board[y][x] == ' ' || board[y][x] == 'R' || board[y][x] == 'Q'))
-		{
-			if (board[y][x] == 'R' || board[y][x] == 'Q') { return true; break; }
-			y--;
-		}
-
-		// left
-		y = i;
-		x = j - 1;
-		while (x >= 0 && (board[y][x] == ' ' || board[y][x] == 'R' || board[y][x] == 'Q'))
-		{
-			if (board[y][x] == 'R' || board[y][x] == 'Q') { return true; break; }
-			x--;
-		}
-
-		// right
-		y = i;
-		x = j + 1;
-		while (x <= 7 && (board[y][x] == ' ' || board[y][x] == 'R' || board[y][x] == 'Q'))
-		{
-			if (board[y][x] == 'R' || board[y][x] == 'Q') { return true; break; }
-			x++;
-		}
-
-		// bottom
-		y = i + 1;
-		x = j;
-		while (y <= 7 && (board[y][x] == ' ' || board[y][x] == 'R' || board[y][x] == 'Q'))
-		{
-			if (board[y][x] == 'R' || board[y][x] == 'Q') { return true; break; }
-			y++;
-		}
-#pragma endregion
-
-		// king
-#pragma region
-				// top left
-		y = i - 1;
-		x = j - 1;
-		if (y >= 0 && x >= 0 && (board[y][x] == 'K')) { return true; }
-
-		// top
-		y = i - 1;
-		x = j;
-		if (y >= 0 && (board[y][x] == 'K')) { return true; }
-
-		// top right
-		y = i - 1;
-		x = j + 1;
-		if (y >= 0 && x <= 7 && (board[y][x] == 'K')) { return true; }
-
-		// left
-		y = i;
-		x = j - 1;
-		if (x >= 0 && (board[y][x] == 'K')) { return true; }
-
-		// right
-		y = i;
-		x = j + 1;
-		if (x <= 7 && (board[y][x] == 'K')) { return true; }
-
-		// bottom left
-		y = i + 1;
-		x = j - 1;
-		if (y <= 7 && x >= 0 && (board[y][x] == 'K')) { return true; }
-
-		// bottom
-		y = i + 1;
-		x = j;
-		if (y <= 7 && (board[y][x] == 'K')) { return true; }
-
-		// bottom right
-		y = i + 1;
-		x = j + 1;
-		if (y <= 7 && x <= 7 && (board[y][x] == 'K')) { return true; }
-#pragma endregion
-
 	}
 
-	return false;
+	return getBit(dangerMap, kingSquare);
 }
 
 vector<U64> helper::positionToU64(Position position)
@@ -1689,7 +1661,7 @@ vector<U64> helper::positionToU64(Position position)
 		int enpassantY = enpassant[0] - 48;
 		int enpassantX = enpassant[1] - 48;
 
-		helper::setBitsFromInt(extra, ENPASSANTLSB, ENPASSANTLSB + 7, enpassantY * 8 + enpassantX);
+		extra = helper::setBitsFromInt(extra, ENPASSANTLSB, ENPASSANTLSB + 7, enpassantY * 8 + enpassantX);
 	}
 	else
 	{
@@ -1840,23 +1812,15 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 		popBit(board[BOARDEXTRA], i);
 	}
 
-	// test enpassant
-	board[BOARDEXTRA] = setBitsFromInt(board[BOARDEXTRA], ENPASSANTLSB, ENPASSANTLSB + 7, 21);
-
-	vector<vector<U64>> nextPositions;
-
-	int pieceStart = -1;
-	int pieceEnd = -1;
-	if (whiteToMove)
+	for (int i = LASTCAPTURELSB; i < LASTCAPTURELSB + 3; i++)
 	{
-		pieceStart = 0;
-		pieceEnd = 6;
+		setBit(board[BOARDEXTRA], i);
 	}
-	else
-	{
-		pieceStart = 6;
-		pieceEnd = 12;
-	}
+
+	vector<vector<U64>> nextPositions[6];
+
+	int pieceStart = (whiteToMove ? 0 : 6);
+	int pieceEnd = (whiteToMove ? 6 : 12);
 
 	// used later for checking legality of moves
 	U64 dangerMap = 0ULL;
@@ -1988,7 +1952,11 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 									for (int j = 6; j < 12; j++)
 									{
-										popBit(newBoard[j], moveSquare + enpassantoffset);
+										if (getBit(newBoard[j], moveSquare + enpassantoffset))
+										{
+											popBit(newBoard[j], moveSquare + enpassantoffset);
+											newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+										}
 									}
 								}
 								else
@@ -2000,12 +1968,16 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 									for (int j = 0; j < 6; j++)
 									{
-										popBit(newBoard[j], moveSquare + enpassantoffset);
+										if (getBit(newBoard[j], moveSquare + enpassantoffset))
+										{
+											popBit(newBoard[j], moveSquare + enpassantoffset);
+											newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+										}
 									}
 								}
 
 								setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-								nextPositions.push_back(newBoard);
+								nextPositions[getIntFromBits(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3) % 7 + 1].push_back(newBoard);
 							}
 
 							// move one or two squares
@@ -2043,19 +2015,22 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 									setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
 								}
 
-								nextPositions.push_back(newBoard);
+								nextPositions[0].push_back(newBoard);
 							}
 						}
 					}
 
 					if (getBit(enemyPieceBitBoard, startSquare))
 					{
-						for (int j = 2; j < 4; j++)
+						if (currentPiece == 'P')
 						{
-							int moveSquare = startSquare + moveAmount[j];
-							if (moveAmount[j] == 0) { continue; }
-
-							setBit(dangerMap, moveSquare);
+							setBit(dangerMap, startSquare + 7);
+							setBit(dangerMap, startSquare + 9);
+						}
+						else
+						{
+							setBit(dangerMap, startSquare - 7);
+							setBit(dangerMap, startSquare - 9);
 						}
 					}
 				}
@@ -2115,7 +2090,11 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 									for (int j = 6; j < 12; j++)
 									{
-										popBit(newBoard[j], moveSquare);
+										if (getBit(newBoard[j], moveSquare))
+										{
+											popBit(newBoard[j], moveSquare);
+											newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+										}
 									}
 								}
 								else
@@ -2125,12 +2104,16 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 									for (int j = 0; j < 6; j++)
 									{
-										popBit(newBoard[j], moveSquare);
+										if (getBit(newBoard[j], moveSquare))
+										{
+											popBit(newBoard[j], moveSquare);
+											newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+										}
 									}
 								}
 
 								setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-								nextPositions.push_back(newBoard);
+								nextPositions[getIntFromBits(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3) % 7 + 1].push_back(newBoard);
 							}
 							else
 							{
@@ -2148,7 +2131,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 								}
 
 								setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-								nextPositions.push_back(newBoard);
+								nextPositions[0].push_back(newBoard);
 							}
 						}
 					}
@@ -2208,7 +2191,11 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 										for (int j = 6; j < 12; j++)
 										{
-											popBit(newBoard[j], moveSquare);
+											if (getBit(newBoard[j], moveSquare))
+											{
+												popBit(newBoard[j], moveSquare);
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+											}
 										}
 									}
 									else
@@ -2218,12 +2205,16 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 										for (int j = 0; j < 6; j++)
 										{
-											popBit(newBoard[j], moveSquare);
+											if (getBit(newBoard[j], moveSquare))
+											{
+												popBit(newBoard[j], moveSquare);
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+											}
 										}
 									}
 
 									setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-									nextPositions.push_back(newBoard);
+									nextPositions[getIntFromBits(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3) % 7 + 1].push_back(newBoard);
 									break;
 								}
 								else
@@ -2242,7 +2233,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 									}
 
 									setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-									nextPositions.push_back(newBoard);
+									nextPositions[0].push_back(newBoard);
 								}
 							}
 
@@ -2299,7 +2290,11 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 										for (int j = 6; j < 12; j++)
 										{
-											popBit(newBoard[j], moveSquare);
+											if (getBit(newBoard[j], moveSquare))
+											{
+												popBit(newBoard[j], moveSquare);
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+											}
 										}
 
 										if (startSquare == 63) { popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE); }
@@ -2312,7 +2307,11 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 										for (int j = 0; j < 6; j++)
 										{
-											popBit(newBoard[j], moveSquare);
+											if (getBit(newBoard[j], moveSquare))
+											{
+												popBit(newBoard[j], moveSquare);
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+											}
 										}
 
 										if (startSquare == 7) { popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE); }
@@ -2320,7 +2319,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 									}
 
 									setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-									nextPositions.push_back(newBoard);
+									nextPositions[getIntFromBits(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3) % 7 + 1].push_back(newBoard);
 									break;
 								}
 								else
@@ -2345,7 +2344,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 									}
 
 									setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-									nextPositions.push_back(newBoard);
+									nextPositions[0].push_back(newBoard);
 								}
 							}
 
@@ -2406,7 +2405,11 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 										for (int j = 6; j < 12; j++)
 										{
-											popBit(newBoard[j], moveSquare);
+											if (getBit(newBoard[j], moveSquare))
+											{
+												popBit(newBoard[j], moveSquare);
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+											}
 										}
 									}
 									else
@@ -2416,12 +2419,16 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 										for (int j = 0; j < 6; j++)
 										{
-											popBit(newBoard[j], moveSquare);
+											if (getBit(newBoard[j], moveSquare))
+											{
+												popBit(newBoard[j], moveSquare);
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+											}
 										}
 									}
 
 									setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-									nextPositions.push_back(newBoard);
+									nextPositions[getIntFromBits(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3) % 7 + 1].push_back(newBoard);
 									break;
 								}
 								else
@@ -2440,7 +2447,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 									}
 
 									setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-									nextPositions.push_back(newBoard);
+									nextPositions[0].push_back(newBoard);
 								}
 							}
 
@@ -2493,7 +2500,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 							setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
 							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
-							nextPositions.push_back(newBoard);
+							nextPositions[0].push_back(newBoard);
 						}
 
 						bool queensideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
@@ -2517,7 +2524,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
 							setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-							nextPositions.push_back(newBoard);
+							nextPositions[0].push_back(newBoard);
 						}
 					}
 
@@ -2544,7 +2551,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
 							setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-							nextPositions.push_back(newBoard);
+							nextPositions[0].push_back(newBoard);
 						}
 
 						bool queensideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
@@ -2568,7 +2575,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
 							setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-							nextPositions.push_back(newBoard);
+							nextPositions[0].push_back(newBoard);
 						}
 					}
 
@@ -2602,7 +2609,11 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 								for (int j = 6; j < 12; j++)
 								{
-									popBit(newBoard[j], moveSquare);
+									if (getBit(newBoard[j], moveSquare))
+									{
+										popBit(newBoard[j], moveSquare);
+										newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+									}
 								}
 
 								if (startSquare == 60)
@@ -2618,7 +2629,11 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 								for (int j = 0; j < 6; j++)
 								{
-									popBit(newBoard[j], moveSquare);
+									if (getBit(newBoard[j], moveSquare))
+									{
+										popBit(newBoard[j], moveSquare);
+										newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3, j % 6);
+									}
 								}
 
 								if (startSquare == 4)
@@ -2630,7 +2645,8 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
 							setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-							nextPositions.push_back(newBoard);
+
+							nextPositions[getIntFromBits(newBoard[BOARDEXTRA], LASTCAPTURELSB, LASTCAPTURELSB + 3) % 7 + 1].push_back(newBoard);
 						}
 						else
 						{
@@ -2661,7 +2677,7 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
 							setBit(newBoard[BOARDEXTRA], ENPASSANTLSB + 7);
-							nextPositions.push_back(newBoard);
+							nextPositions[0].push_back(newBoard);
 						}
 					}
 
@@ -2682,221 +2698,365 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 	// check the legality of all the possible moves found
 	vector<vector<U64>> legalPositions;
 
-	// check if the king is initially in danger
-	bool kingInDanger = false;
-	for (int i = 0; i < 64; i++)
+	for (int capturedPiece = 5; capturedPiece >= 0; capturedPiece--)
 	{
-		if (getBit(dangerMap, i))
+		for (vector<U64> nextPosition : nextPositions[capturedPiece])
 		{
-			kingInDanger = true;
-		}
-	}
-
-	for (vector<U64> nextPosition : nextPositions)
-	{
-		int kingSquare = -1;
-		for (int i = 0; i < 64; i++)
-		{
-			if ((whiteToMove && getBit(nextPosition[WHITEKING], i)) || (!whiteToMove && getBit(nextPosition[BLACKKING], i)))
+			int kingSquare = -1;
+			for (int i = 0; i < 64; i++)
 			{
-				kingSquare = i;
-			}
-		}
-
-		// find ally/enemy piece positions (if whiteToMove, then ally == black)
-		allyPieces = 0ULL;
-		enemyPieces = 0ULL;
-		if (!whiteToMove)
-		{
-			for (int j = 0; j < 6; j++)
-			{
-				U64 currentBoard = nextPosition[j];
-				for (int square = 0; square < 64; square++)
+				if ((whiteToMove && getBit(nextPosition[WHITEKING], i)) || (!whiteToMove && getBit(nextPosition[BLACKKING], i)))
 				{
-					if (getBit(currentBoard, square))
+					kingSquare = i;
+				}
+			}
+
+			bool kingInDanger = (getBit(dangerMap, kingSquare) ? true : false);
+
+			// find ally/enemy piece positions (if whiteToMove, then ally == black)
+			allyPieces = 0ULL;
+			enemyPieces = 0ULL;
+			if (!whiteToMove)
+			{
+				for (int j = 0; j < 6; j++)
+				{
+					U64 currentBoard = nextPosition[j];
+					for (int square = 0; square < 64; square++)
 					{
-						setBit(allyPieces, square);
+						if (getBit(currentBoard, square))
+						{
+							setBit(allyPieces, square);
+						}
+					}
+				}
+
+				for (int j = 6; j < 12; j++)
+				{
+					U64 currentBoard = nextPosition[j];
+					for (int square = 0; square < 64; square++)
+					{
+						if (getBit(currentBoard, square))
+						{
+							setBit(enemyPieces, square);
+						}
+					}
+				}
+			}
+			else
+			{
+				for (int j = 6; j < 12; j++)
+				{
+					U64 currentBoard = nextPosition[j];
+					for (int square = 0; square < 64; square++)
+					{
+						if (getBit(currentBoard, square))
+						{
+							setBit(allyPieces, square);
+						}
+					}
+				}
+
+				for (int j = 0; j < 6; j++)
+				{
+					U64 currentBoard = nextPosition[j];
+					for (int square = 0; square < 64; square++)
+					{
+						if (getBit(currentBoard, square))
+						{
+							setBit(enemyPieces, square);
+						}
 					}
 				}
 			}
 
-			for (int j = 6; j < 12; j++)
+			// find pieceStart and pieceEnd
+			if (whiteToMove)
 			{
-				U64 currentBoard = nextPosition[j];
-				for (int square = 0; square < 64; square++)
+				if (!getBit(nextPosition[BOARDEXTRA], LASTKINGMOVE))
 				{
-					if (getBit(currentBoard, square))
+					if (!kingInDanger)
 					{
-						setBit(enemyPieces, square);
+						pieceStart = BLACKBISHOP;
+						pieceEnd = BLACKQUEEN + 1;
 					}
-				}
-			}
-		}
-		else
-		{
-			for (int j = 6; j < 12; j++)
-			{
-				U64 currentBoard = nextPosition[j];
-				for (int square = 0; square < 64; square++)
-				{
-					if (getBit(currentBoard, square))
+					else
 					{
-						setBit(allyPieces, square);
+						pieceStart = BLACKPAWN;
+						pieceEnd = BLACKQUEEN + 1;
 					}
-				}
-			}
-
-			for (int j = 0; j < 6; j++)
-			{
-				U64 currentBoard = nextPosition[j];
-				for (int square = 0; square < 64; square++)
-				{
-					if (getBit(currentBoard, square))
-					{
-						setBit(enemyPieces, square);
-					}
-				}
-			}
-		}
-
-		// find pieceStart and pieceEnd
-		if (whiteToMove)
-		{
-			if (!getBit(nextPosition[BOARDEXTRA], LASTKINGMOVE))
-			{
-				if (!kingInDanger)
-				{
-					pieceStart = BLACKBISHOP;
-					pieceEnd = BLACKQUEEN + 1;
 				}
 				else
 				{
 					pieceStart = BLACKPAWN;
-					pieceEnd = BLACKQUEEN + 1;
+					pieceEnd = BLACKKING + 1;
 				}
 			}
 			else
 			{
-				pieceStart = BLACKPAWN;
-				pieceEnd = BLACKKING + 1;
-			}
-		}
-		else
-		{
-			if (!getBit(nextPosition[BOARDEXTRA], LASTKINGMOVE))
-			{
-				if (!kingInDanger)
+				if (!getBit(nextPosition[BOARDEXTRA], LASTKINGMOVE))
 				{
-					pieceStart = WHITEBISHOP;
-					pieceEnd = WHITEQUEEN + 1;
+					if (!kingInDanger)
+					{
+						pieceStart = WHITEBISHOP;
+						pieceEnd = WHITEQUEEN + 1;
+					}
+					else
+					{
+						pieceStart = WHITEPAWN;
+						pieceEnd = WHITEQUEEN + 1;
+					}
 				}
 				else
 				{
 					pieceStart = WHITEPAWN;
-					pieceEnd = WHITEQUEEN + 1;
+					pieceEnd = WHITEKING + 1;
 				}
 			}
-			else
-			{
-				pieceStart = WHITEPAWN;
-				pieceEnd = WHITEKING + 1;
-			}
-		}
 
-		bool illegalPosition = false;
+			bool illegalPosition = false;
 
-		for (int i = pieceStart; i < pieceEnd; i++)
-		{
-			char currentPiece = helper::pieces[i];
-			switch (currentPiece)
+			for (int i = pieceStart; i < pieceEnd; i++)
 			{
-			case 'P':
-			case 'p':
-			{
-				U64 currentPieceBitBoard = (currentPiece == 'P' ? nextPosition[WHITEPAWN] : nextPosition[BLACKPAWN]);
-
-				for (int startSquare = 0; startSquare < 64; startSquare++)
+				char currentPiece = helper::pieces[i];
+				switch (currentPiece)
 				{
-					if (getBit(currentPieceBitBoard, startSquare))
-					{
-						int toMove[8] = { startSquare - 17, startSquare - 15, startSquare - 10, startSquare - 6, startSquare + 6, startSquare + 10, startSquare + 15, startSquare + 17 };
-					}
-				}
-
-				break;
-			}
-
-			case 'N':
-			case 'n':
-			{
-				U64 currentPieceBitBoard = (currentPiece == 'N' ? nextPosition[WHITEKNIGHT] : nextPosition[BLACKKNIGHT]);
-
-				for (int startSquare = 0; startSquare < 64; startSquare++)
+				case 'P':
+				case 'p':
 				{
-					if (getBit(currentPieceBitBoard, startSquare))
+					U64 currentPieceBitBoard = (currentPiece == 'P' ? nextPosition[WHITEPAWN] : nextPosition[BLACKPAWN]);
+
+					for (int startSquare = 0; startSquare < 64; startSquare++)
 					{
-						int toMove[8] = { startSquare - 17, startSquare - 15, startSquare - 10, startSquare - 6, startSquare + 6, startSquare + 10, startSquare + 15, startSquare + 17 };
-
-						int knightPos = 0;
-
-						if (getBit(COL0BITBOARD, startSquare)) { knightPos += (1 << 0); }
-						if (getBit(COL1BITBOARD, startSquare)) { knightPos += (1 << 1); }
-						if (getBit(COL6BITBOARD, startSquare)) { knightPos += (1 << 2); }
-						if (getBit(COL7BITBOARD, startSquare)) { knightPos += (1 << 3); }
-						if (getBit(ROW0BITBOARD, startSquare)) { knightPos += (1 << 4); }
-						if (getBit(ROW1BITBOARD, startSquare)) { knightPos += (1 << 5); }
-						if (getBit(ROW6BITBOARD, startSquare)) { knightPos += (1 << 6); }
-						if (getBit(ROW7BITBOARD, startSquare)) { knightPos += (1 << 7); }
-
-						if (getBit(knightPos, 0) || getBit(knightPos, 4) || getBit(knightPos, 5)) { toMove[0] = -1; }
-						if (getBit(knightPos, 3) || getBit(knightPos, 4) || getBit(knightPos, 5)) { toMove[1] = -1; }
-						if (getBit(knightPos, 0) || getBit(knightPos, 1) || getBit(knightPos, 4)) { toMove[2] = -1; }
-						if (getBit(knightPos, 2) || getBit(knightPos, 3) || getBit(knightPos, 4)) { toMove[3] = -1; }
-						if (getBit(knightPos, 0) || getBit(knightPos, 1) || getBit(knightPos, 7)) { toMove[4] = -1; }
-						if (getBit(knightPos, 2) || getBit(knightPos, 3) || getBit(knightPos, 7)) { toMove[5] = -1; }
-						if (getBit(knightPos, 0) || getBit(knightPos, 6) || getBit(knightPos, 7)) { toMove[6] = -1; }
-						if (getBit(knightPos, 3) || getBit(knightPos, 6) || getBit(knightPos, 7)) { toMove[7] = -1; }
-
-
-						for (int moveSquare : toMove)
+						if (getBit(currentPieceBitBoard, startSquare))
 						{
-							if (moveSquare == -1) { continue; }
+							int toMove[8] = { startSquare - 17, startSquare - 15, startSquare - 10, startSquare - 6, startSquare + 6, startSquare + 10, startSquare + 15, startSquare + 17 };
 
-							if (moveSquare == kingSquare)
+							if (currentPiece == 'P')
 							{
-								illegalPosition = true;
-								break;
+								if (startSquare - 7 == kingSquare || startSquare - 9 == kingSquare)
+								{
+									illegalPosition = true;
+								}
+							}
+							else
+							{
+								if (startSquare + 7 == kingSquare || startSquare + 9 == kingSquare)
+								{
+									illegalPosition = true;
+								}
 							}
 						}
+
+						if (illegalPosition) { break; }
 					}
 
-					if (illegalPosition) { break; }
+					break;
 				}
 
-				break;
-			}
-
-			case 'B':
-			case 'b':
-			{
-				U64 currentPieceBitBoard = (currentPiece == 'B' ? nextPosition[WHITEBISHOP] : nextPosition[BLACKBISHOP]);
-
-				for (int startSquare = 0; startSquare < 64; startSquare++)
+				case 'N':
+				case 'n':
 				{
-					if (getBit(currentPieceBitBoard, startSquare))
+					U64 currentPieceBitBoard = (currentPiece == 'N' ? nextPosition[WHITEKNIGHT] : nextPosition[BLACKKNIGHT]);
+
+					for (int startSquare = 0; startSquare < 64; startSquare++)
 					{
-						int moveAmount[4] = { -9, -7, 7, 9 };
-
-						for (int j = 0; j < 4; j++)
+						if (getBit(currentPieceBitBoard, startSquare))
 						{
-							int moveSquare = startSquare;
+							int toMove[8] = { startSquare - 17, startSquare - 15, startSquare - 10, startSquare - 6, startSquare + 6, startSquare + 10, startSquare + 15, startSquare + 17 };
 
-							while (true)
+							int knightPos = 0;
+
+							if (getBit(COL0BITBOARD, startSquare)) { knightPos += (1 << 0); }
+							if (getBit(COL1BITBOARD, startSquare)) { knightPos += (1 << 1); }
+							if (getBit(COL6BITBOARD, startSquare)) { knightPos += (1 << 2); }
+							if (getBit(COL7BITBOARD, startSquare)) { knightPos += (1 << 3); }
+							if (getBit(ROW0BITBOARD, startSquare)) { knightPos += (1 << 4); }
+							if (getBit(ROW1BITBOARD, startSquare)) { knightPos += (1 << 5); }
+							if (getBit(ROW6BITBOARD, startSquare)) { knightPos += (1 << 6); }
+							if (getBit(ROW7BITBOARD, startSquare)) { knightPos += (1 << 7); }
+
+							if (getBit(knightPos, 0) || getBit(knightPos, 4) || getBit(knightPos, 5)) { toMove[0] = -1; }
+							if (getBit(knightPos, 3) || getBit(knightPos, 4) || getBit(knightPos, 5)) { toMove[1] = -1; }
+							if (getBit(knightPos, 0) || getBit(knightPos, 1) || getBit(knightPos, 4)) { toMove[2] = -1; }
+							if (getBit(knightPos, 2) || getBit(knightPos, 3) || getBit(knightPos, 4)) { toMove[3] = -1; }
+							if (getBit(knightPos, 0) || getBit(knightPos, 1) || getBit(knightPos, 7)) { toMove[4] = -1; }
+							if (getBit(knightPos, 2) || getBit(knightPos, 3) || getBit(knightPos, 7)) { toMove[5] = -1; }
+							if (getBit(knightPos, 0) || getBit(knightPos, 6) || getBit(knightPos, 7)) { toMove[6] = -1; }
+							if (getBit(knightPos, 3) || getBit(knightPos, 6) || getBit(knightPos, 7)) { toMove[7] = -1; }
+
+
+							for (int moveSquare : toMove)
 							{
-								if (j == 0 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
-								if (j == 1 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
-								if (j == 2 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
-								if (j == 3 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+								if (moveSquare == -1) { continue; }
+
+								if (moveSquare == kingSquare)
+								{
+									illegalPosition = true;
+									break;
+								}
+							}
+						}
+
+						if (illegalPosition) { break; }
+					}
+
+					break;
+				}
+
+				case 'B':
+				case 'b':
+				{
+					U64 currentPieceBitBoard = (currentPiece == 'B' ? nextPosition[WHITEBISHOP] : nextPosition[BLACKBISHOP]);
+
+					for (int startSquare = 0; startSquare < 64; startSquare++)
+					{
+						if (getBit(currentPieceBitBoard, startSquare))
+						{
+							int moveAmount[4] = { -9, -7, 7, 9 };
+
+							for (int j = 0; j < 4; j++)
+							{
+								int moveSquare = startSquare;
+
+								while (true)
+								{
+									if (j == 0 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
+									if (j == 1 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
+									if (j == 2 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+									if (j == 3 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+
+									moveSquare += moveAmount[j];
+
+									if (moveSquare == kingSquare)
+									{
+										illegalPosition = true;
+										break;
+									}
+
+									if (getBit(allyPieces, moveSquare) || getBit(enemyPieces, moveSquare)) { break; }
+								}
+
+								if (illegalPosition) { break; }
+							}
+						}
+
+						if (illegalPosition) { break; }
+					}
+
+					break;
+				}
+
+				case 'R':
+				case 'r':
+				{
+					U64 currentPieceBitBoard = (currentPiece == 'R' ? nextPosition[WHITEROOK] : nextPosition[BLACKROOK]);
+
+					for (int startSquare = 0; startSquare < 64; startSquare++)
+					{
+						if (getBit(currentPieceBitBoard, startSquare))
+						{
+							int moveAmount[4] = { -8, -1, 1, 8 };
+
+							for (int j = 0; j < 4; j++)
+							{
+								int moveSquare = startSquare;
+
+								while (true)
+								{
+									if (j == 0 && getBit(ROW0BITBOARD, moveSquare)) { break; }
+									if (j == 1 && getBit(COL0BITBOARD, moveSquare)) { break; }
+									if (j == 2 && getBit(COL7BITBOARD, moveSquare)) { break; }
+									if (j == 3 && getBit(ROW7BITBOARD, moveSquare)) { break; }
+
+									moveSquare += moveAmount[j];
+									if (moveSquare == kingSquare)
+									{
+										illegalPosition = true;
+										break;
+									}
+
+									if (getBit(allyPieces, moveSquare) || getBit(enemyPieces, moveSquare)) { break; }
+								}
+
+								if (illegalPosition) { break; }
+							}
+						}
+
+						if (illegalPosition) { break; }
+					}
+
+					break;
+				}
+
+				case 'Q':
+				case 'q':
+				{
+					U64 currentPieceBitBoard = (currentPiece == 'Q' ? nextPosition[WHITEQUEEN] : nextPosition[BLACKQUEEN]);
+
+					for (int startSquare = 0; startSquare < 64; startSquare++)
+					{
+						if (getBit(currentPieceBitBoard, startSquare))
+						{
+							int moveAmount[8] = { -9, -7, 7, 9, -8, -1, 1, 8 };
+
+							for (int j = 0; j < 8; j++)
+							{
+								int moveSquare = startSquare;
+
+								while (true)
+								{
+									if (j == 0 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
+									if (j == 1 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
+									if (j == 2 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+									if (j == 3 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
+									if (j == 4 && getBit(ROW0BITBOARD, moveSquare)) { break; }
+									if (j == 5 && getBit(COL0BITBOARD, moveSquare)) { break; }
+									if (j == 6 && getBit(COL7BITBOARD, moveSquare)) { break; }
+									if (j == 7 && getBit(ROW7BITBOARD, moveSquare)) { break; }
+
+									moveSquare += moveAmount[j];
+									if (moveSquare == kingSquare)
+									{
+										illegalPosition = true;
+										break;
+									}
+
+									if (getBit(allyPieces, moveSquare) || getBit(enemyPieces, moveSquare)) { break; }
+								}
+
+								if (illegalPosition) { break; }
+							}
+						}
+
+						if (illegalPosition) { break; }
+					}
+
+					break;
+				}
+
+				case 'K':
+				case 'k':
+				{
+					U64 currentPieceBitBoard = (currentPiece == 'K' ? nextPosition[WHITEKING] : nextPosition[BLACKKING]);
+
+					for (int startSquare = 0; startSquare < 64; startSquare++)
+					{
+						if (getBit(currentPieceBitBoard, startSquare))
+						{
+							int moveAmount[8] = { -9, -7, 7, 9, -8, -1, 1, 8 };
+
+							for (int j = 0; j < 8; j++)
+							{
+								int moveSquare = startSquare;
+
+								if (j == 0 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { continue; }
+								if (j == 1 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { continue; }
+								if (j == 2 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { continue; }
+								if (j == 3 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { continue; }
+								if (j == 4 && getBit(ROW0BITBOARD, moveSquare)) { continue; }
+								if (j == 5 && getBit(COL0BITBOARD, moveSquare)) { continue; }
+								if (j == 6 && getBit(COL7BITBOARD, moveSquare)) { continue; }
+								if (j == 7 && getBit(ROW7BITBOARD, moveSquare)) { continue; }
 
 								moveSquare += moveAmount[j];
 
@@ -2908,159 +3068,28 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 								if (getBit(allyPieces, moveSquare) || getBit(enemyPieces, moveSquare)) { break; }
 							}
-
-							if (illegalPosition) { break; }
 						}
+
+						if (illegalPosition) { break; }
 					}
 
-					if (illegalPosition) { break; }
+					break;
 				}
 
-				break;
+				default:
+					break;
+
+				}
+
+				if (illegalPosition) { break; }
 			}
 
-			case 'R':
-			case 'r':
+			if (!illegalPosition)
 			{
-				U64 currentPieceBitBoard = (currentPiece == 'R' ? nextPosition[WHITEROOK] : nextPosition[BLACKROOK]);
-
-				for (int startSquare = 0; startSquare < 64; startSquare++)
-				{
-					if (getBit(currentPieceBitBoard, startSquare))
-					{
-						int moveAmount[4] = { -8, -1, 1, 8 };
-
-						for (int j = 0; j < 4; j++)
-						{
-							int moveSquare = startSquare;
-
-							while (true)
-							{
-								if (j == 0 && getBit(ROW0BITBOARD, moveSquare)) { break; }
-								if (j == 1 && getBit(COL0BITBOARD, moveSquare)) { break; }
-								if (j == 2 && getBit(COL7BITBOARD, moveSquare)) { break; }
-								if (j == 3 && getBit(ROW7BITBOARD, moveSquare)) { break; }
-
-								moveSquare += moveAmount[j];
-								if (moveSquare == kingSquare)
-								{
-									illegalPosition = true;
-									break;
-								}
-
-								if (getBit(allyPieces, moveSquare) || getBit(enemyPieces, moveSquare)) { break; }
-							}
-
-							if (illegalPosition) { break; }
-						}
-					}
-
-					if (illegalPosition) { break; }
-				}
-
-				break;
+				legalPositions.push_back(nextPosition);
 			}
-
-			case 'Q':
-			case 'q':
-			{
-				U64 currentPieceBitBoard = (currentPiece == 'Q' ? nextPosition[WHITEQUEEN] : nextPosition[BLACKQUEEN]);
-
-				for (int startSquare = 0; startSquare < 64; startSquare++)
-				{
-					if (getBit(currentPieceBitBoard, startSquare))
-					{
-						int moveAmount[8] = { -9, -7, 7, 9, -8, -1, 1, 8 };
-
-						for (int j = 0; j < 8; j++)
-						{
-							int moveSquare = startSquare;
-
-							while (true)
-							{
-								if (j == 0 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
-								if (j == 1 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { break; }
-								if (j == 2 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
-								if (j == 3 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { break; }
-								if (j == 4 && getBit(ROW0BITBOARD, moveSquare)) { break; }
-								if (j == 5 && getBit(COL0BITBOARD, moveSquare)) { break; }
-								if (j == 6 && getBit(COL7BITBOARD, moveSquare)) { break; }
-								if (j == 7 && getBit(ROW7BITBOARD, moveSquare)) { break; }
-
-								moveSquare += moveAmount[j];
-								if (moveSquare == kingSquare)
-								{
-									illegalPosition = true;
-									break;
-								}
-
-								if (getBit(allyPieces, moveSquare) || getBit(enemyPieces, moveSquare)) { break; }
-							}
-
-							if (illegalPosition) { break; }
-						}
-					}
-
-					if (illegalPosition) { break; }
-				}
-
-				break;
-			}
-
-			case 'K':
-			case 'k':
-			{
-				U64 currentPieceBitBoard = (currentPiece == 'K' ? nextPosition[WHITEKING] : nextPosition[BLACKKING]);
-
-				for (int startSquare = 0; startSquare < 64; startSquare++)
-				{
-					if (getBit(currentPieceBitBoard, startSquare))
-					{
-						int moveAmount[8] = { -9, -7, 7, 9, -8, -1, 1, 8 };
-
-						for (int j = 0; j < 8; j++)
-						{
-							int moveSquare = startSquare;
-
-							if (j == 0 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { continue; }
-							if (j == 1 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW0BITBOARD, moveSquare))) { continue; }
-							if (j == 2 && (getBit(COL0BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { continue; }
-							if (j == 3 && (getBit(COL7BITBOARD, moveSquare) || getBit(ROW7BITBOARD, moveSquare))) { continue; }
-							if (j == 4 && getBit(ROW0BITBOARD, moveSquare)) { continue; }
-							if (j == 5 && getBit(COL0BITBOARD, moveSquare)) { continue; }
-							if (j == 6 && getBit(COL7BITBOARD, moveSquare)) { continue; }
-							if (j == 7 && getBit(ROW7BITBOARD, moveSquare)) { continue; }
-
-							moveSquare += moveAmount[j];
-
-							if (moveSquare == kingSquare)
-							{
-								illegalPosition = true;
-								break;
-							}
-
-							if (getBit(allyPieces, moveSquare) || getBit(enemyPieces, moveSquare)) { break; }
-						}
-					}
-
-					if (illegalPosition) { break; }
-				}
-
-				break;
-			}
-
-			default:
-				break;
-
-			}
-
-			if (illegalPosition) { break; }
 		}
 
-		if (!illegalPosition)
-		{
-			legalPositions.push_back(nextPosition);
-		}
 	}
 
 	return legalPositions;
