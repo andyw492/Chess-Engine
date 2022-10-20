@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "helper.h"
 #include "position.h"
 
 using std::string;
@@ -34,6 +35,16 @@ public:
 	stack<char*> toExpand;
 	unordered_map<int, char*> expanded;
 
+
+	U64 zobristTable[13][64];
+	U64 startingHashValue = 0ULL;
+	unordered_map<U64, vector<vector<U64>>> nextPositionsCache;
+	unordered_map<U64, vector<U64>> positionsCache;
+
+	vector<U64> lastEnginePosition;
+
+	int foundInCache = 0;
+
 	vector<float> values;
 	bool workerError = false;
 
@@ -45,6 +56,7 @@ public:
 	bool windowPrint = false;
 	bool enginePrint = false;
 	bool workerPrint = false;
+	bool workerRandomize = false;
 
 	string gameResult = "";
 };

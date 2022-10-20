@@ -457,11 +457,11 @@ void Window::display(LPVOID pParam)
 				{
 					printedLegal = true;
 					bool castling[4];
-					string enpassant = "";
+					//string enpassant = "";
 					WaitForSingleObject(p->mutex, INFINITE);
 					Position position = p->currentPosition;
 					memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
-					enpassant = p->currentPosition.enpassant;
+					//enpassant = p->currentPosition.enpassant;
 					ReleaseMutex(p->mutex);
 
 					auto begin = std::chrono::high_resolution_clock::now();
@@ -549,11 +549,11 @@ void Window::display(LPVOID pParam)
 						// set legal rectangle positions
 						string from = to_string(selection[0]) + to_string(selection[1]);
 						bool castling[4];
-						string enpassant = "";
+						//string enpassant = "";
 						WaitForSingleObject(p->mutex, INFINITE);
 						Position position = p->currentPosition;
 						memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
-						enpassant = p->currentPosition.enpassant;
+						//enpassant = p->currentPosition.enpassant;
 						ReleaseMutex(p->mutex);
 						vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
 
@@ -587,11 +587,11 @@ void Window::display(LPVOID pParam)
 						
 						// deselect if not legal
 						bool castling[4];
-						string enpassant = "";
+						//string enpassant = "";
 						WaitForSingleObject(p->mutex, INFINITE);
 						memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
 						Position position = p->currentPosition;
-						enpassant = p->currentPosition.enpassant;
+						//enpassant = p->currentPosition.enpassant;
 						ReleaseMutex(p->mutex);
 						vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
 						if (find(legalMoves.begin(), legalMoves.end(), to) == legalMoves.end())
@@ -636,18 +636,18 @@ void Window::display(LPVOID pParam)
 
 								// if a pawn moved forward two squares, then set an en passant square
 								// otherwise, clear the en passant square
-								if (board[targetSquare[0]][targetSquare[1]] == 'P' && selection[0] - targetSquare[0] == 2)
-								{
-									enpassant = to_string(targetSquare[0] + 1) + to_string(targetSquare[1]);
-								}
-								else if (board[targetSquare[0]][targetSquare[1]] == 'p' && selection[0] - targetSquare[0] == -2)
-								{
-									enpassant = to_string(targetSquare[0] - 1) + to_string(targetSquare[1]);
-								}
-								else
-								{
-									enpassant = "";
-								}
+								//if (board[targetSquare[0]][targetSquare[1]] == 'P' && selection[0] - targetSquare[0] == 2)
+								//{
+								//	enpassant = to_string(targetSquare[0] + 1) + to_string(targetSquare[1]);
+								//}
+								//else if (board[targetSquare[0]][targetSquare[1]] == 'p' && selection[0] - targetSquare[0] == -2)
+								//{
+								//	enpassant = to_string(targetSquare[0] - 1) + to_string(targetSquare[1]);
+								//}
+								//else
+								//{
+								//	enpassant = "";
+								//}
 
 								// if a pawn moved to an empty square, then clear the square behind it (to handle en passant captures)
 								if (board[targetSquare[0]][targetSquare[1]] == 'P' && targetPrev == ' ')
@@ -707,7 +707,7 @@ void Window::display(LPVOID pParam)
 
 							WaitForSingleObject(p->mutex, INFINITE);
 							memcpy(p->currentPosition.castling, castling, 4 * sizeof(bool));
-							p->currentPosition.enpassant = enpassant;
+							//p->currentPosition.enpassant = enpassant;
 							ReleaseMutex(p->mutex);
 
 							// clear selection and legal rectangles
@@ -732,11 +732,11 @@ void Window::display(LPVOID pParam)
 
 							string from = to_string(selection[0]) + to_string(selection[1]);
 							bool castling[4];
-							string enpassant = "";
+							//string enpassant = "";
 							WaitForSingleObject(p->mutex, INFINITE);
 							memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
 							Position position = p->currentPosition;
-							enpassant = p->currentPosition.enpassant;
+							//enpassant = p->currentPosition.enpassant;
 							ReleaseMutex(p->mutex);
 							vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
 

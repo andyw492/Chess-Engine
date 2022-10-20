@@ -23,7 +23,7 @@ class Worker
 {
 public:
 
-	Worker(bool workerPrint);
+	Worker(bool workerPrint, U64 zobristTable[13][64], bool randomize);
 
 	double evaluate(PositionNode* node);
 
@@ -31,7 +31,10 @@ public:
 
 private:
 
+	U64 zobristTable[13][64];
+
 	bool dpr = false;
+	bool randomize = false;
 };
 
 #endif

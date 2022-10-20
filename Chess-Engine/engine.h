@@ -33,16 +33,21 @@ class Engine
 {
 public:
 
-	Engine(bool enginePrint);
+	Engine(bool enginePrint, U64 zobristTable[13][64]);
 
 	void startClock();
 	void printTime();
+
+	U64 getStartingHashValue(vector<U64> position);
+	int getStartingEvaluation(vector<U64> position);
 
 	void deletePositionTree(PositionNode* node);
 
 	UINT start(LPVOID pParam);
 
 private:
+
+	U64 zobristTable[13][64];
 
 	bool dpr = false;
 	clock_t clockStart;

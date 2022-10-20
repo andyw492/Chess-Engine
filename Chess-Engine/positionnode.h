@@ -20,6 +20,7 @@ public:
 	PositionNode* parent = NULL;
 
 	int id = 0;
+	U64 hashValue = 0;
 	vector<vector<U64>> nextPositions;
 
 	bool firstVisit = true;

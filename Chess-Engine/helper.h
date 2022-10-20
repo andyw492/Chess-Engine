@@ -19,18 +19,20 @@
 #define BLACKQUEEN 10
 #define BLACKKING 11
 #define BOARDEXTRA 12
+#define BOARDHASHVALUE 13
 
-#define LEGALCASTLEWHITEKINGSIDE 3
+#define WHITETOMOVE 0
+#define LEGALCASTLEWHITEKINGSIDE 1
 #define LEGALCASTLEWHITEQUEENSIDE 2
-#define LEGALCASTLEBLACKKINGSIDE 1
-#define LEGALCASTLEBLACKQUEENSIDE 0
-#define ENPASSANTLSB 4
-#define LASTKINGMOVE 11
-#define LASTCASTLEWHITEKINGSIDE 15
-#define LASTCASTLEWHITEQUEENSIDE 14
-#define LASTCASTLEBLACKKINGSIDE 13
-#define LASTCASTLEBLACKQUEENSIDE 12
-#define LASTCAPTURELSB 16
+#define LEGALCASTLEBLACKKINGSIDE 3
+#define LEGALCASTLEBLACKQUEENSIDE 4
+#define LASTKINGMOVE 5
+#define LASTCASTLEWHITEKINGSIDE 9
+#define LASTCASTLEWHITEQUEENSIDE 8
+#define LASTCASTLEBLACKKINGSIDE 7
+#define LASTCASTLEBLACKQUEENSIDE 6
+#define EVALUATIONLSB 10
+#define NEGATIVEEVALUATION 27
 
 #define COL0BITBOARD 0x0101010101010101
 #define COL1BITBOARD 0x0202020202020202
@@ -64,6 +66,7 @@ using std::find;
 namespace helper
 {
 	char pieces[] = { 'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k' };
+	double pieceValues[12] = { 1, 3, 3, 5, 9, 0, -1, -3, -3, -5, -9, 0 };
 
 	vector<string> splitToVector(string str, char del);
 
@@ -74,6 +77,7 @@ namespace helper
 	map<string, vector<string>> getLegalMoves(Position position, bool whiteToMove);
 
 	bool inCheck(vector<U64>, bool whiteToMove);
+	bool inCheck(char board[8][8], bool whiteToMove);
 
 	vector<U64> positionToU64(Position position);
 
@@ -85,7 +89,7 @@ namespace helper
 
 	U64 setBitsFromInt(U64 bits, int start, int end, int num);
 
-	vector<vector<U64>> getNextPositions(vector<U64> board, bool whiteToMove);
+	vector<vector<U64>> getNextPositions(vector<U64> board, bool whiteToMove, U64 zobristTable[13][64]);
 }
 
 #endif

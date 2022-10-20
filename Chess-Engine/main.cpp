@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cinttypes>
+#include <random>
 
 #include <stdlib.h>
 #include <crtdbg.h>
@@ -22,19 +23,23 @@
 using std::cout;
 using std::endl;
 using std::string;
-
-
+using std::mt19937;
+using std::uniform_int_distribution;
+using std::copy;
 
 UINT engineThread(LPVOID pParam)
 {
 	Parameters *p = ((Parameters*)pParam);
 
 	bool enginePrint = false;
+	U64 zobristTable[13][64];
+
 	WaitForSingleObject(p->mutex, INFINITE);
 	enginePrint = p->enginePrint;
+	memcpy(zobristTable, p->zobristTable, 13 * 64 * sizeof(U64));
 	ReleaseMutex(p->mutex);
 
-	Engine e(enginePrint);
+	Engine e(enginePrint, zobristTable);
 	return e.start(pParam);
 }
 
@@ -43,12 +48,17 @@ UINT workerThreads(LPVOID pParam)
 	Parameters *p = ((Parameters*)pParam);
 
 	bool workerPrint = false;
+	U64 zobristTable[13][64];
+	bool randomize = false;
+
 	WaitForSingleObject(p->mutex, INFINITE);
 	workerPrint = p->workerPrint;
+	memcpy(zobristTable, p->zobristTable, 13 * 64 * sizeof(U64));
+	randomize = p->workerRandomize;
 	ReleaseMutex(p->mutex);
 
-	Worker e(workerPrint);
-	return e.start(pParam);
+	Worker w(workerPrint, zobristTable, randomize);
+	return w.start(pParam);
 }
 
 UINT windowThread(LPVOID pParam)
@@ -126,11 +136,10 @@ vector<U64> fenToBoard(string fen)
 	}
 
 	// extra info: legal castling in all four ways, no last castle, no enpassant square
-	board.push_back(15ULL);
+	board.push_back(30ULL);
 
 	return board;
 }
-
 
 int main(void)
 {
@@ -145,36 +154,32 @@ int main(void)
 	p.eventQuit = CreateEvent(NULL, true, false, NULL);
 
 	string fen = "";
-	int fenOption = 0;
 
-	switch (fenOption)
+	// starting position
+	fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+	// misc
+	//fen = "rnbqkbnr/pppppppp/8/8/3PP3/2N1BQ2/PPP2PPP/R3KBNR w KQkq - 0 1";
+
+	p.maxDepth = 4;
+	p.workerRandomize = true;
+
+	vector<U64> board = fenToBoard(helper::splitToVector(fen, ' ')[0]);
+	board.push_back(0);
+
+	// initialize zobrist table
+	mt19937 mt(01234567);
+	for (int i = 0; i < 13; i++)
 	{
-	case 0:
-		// standard starting position
-		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-		break;
-	case 1:
-		// depth 2 test
-		fen = "k1K5/8/1P1p1p2/8/8/2P5/8/8 w - - 0 1";
-		break;
-	case 2:
-		// depth 3 test
-		fen = "5prk/5ppb/5ppp/5ppn/8/8/7K/5P2 w - - 0 1";
-		break;
-	case 3:
-		// endgame test
-		fen = "4k3/4r3/8/8/8/8/3PPP2/4K3 w - - 0 1";
-		break;
-	case 4:
-		// misc
-		fen = "7k/8/6Q1/8/8/8/8/6R1 w - - 0 1";
-		break;
+		for (int j = 0; j < 64; j++)
+		{
+			uniform_int_distribution<unsigned long long int> dist(0, UINT64_MAX);
+			p.zobristTable[i][j] = dist(mt);
+		}
 	}
 
-	//vector<U64> board = fenToBoard(helper::splitToVector(fen, ' ')[0]);
-
 	//auto begin = std::chrono::high_resolution_clock::now();
-	//vector<vector<U64>> nextPositions = helper::getNextPositions(board, true);
+	//vector<vector<U64>> nextPositions = helper::getNextPositions(board, true, p.zobristTable);
 	//auto end = std::chrono::high_resolution_clock::now();
 
 	//for (auto position : nextPositions)
@@ -187,7 +192,6 @@ int main(void)
 	//return 0;
 
 	p.initialFen = helper::splitToVector(fen, ' ')[0];
-	p.maxDepth = 4;
 
 	// debug
 	int debugVal = 3;
@@ -197,6 +201,8 @@ int main(void)
 
 	srand(time(0));
 
+
+
 	handles[0] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)engineThread, &p, 0, NULL);
 	handles[1] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)windowThread, &p, 0, NULL);
 	handles[2] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)quitThread, &p, 0, NULL);
@@ -205,8 +211,6 @@ int main(void)
 	{
 		handles[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)workerThreads, &p, 0, NULL);
 	}
-	
-
 
 	for (int i = 0; i < threadCount + 1; i++)
 	{

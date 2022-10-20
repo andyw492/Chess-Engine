@@ -1,12 +1,16 @@
 ﻿  main.cpp
-c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(84): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(88): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(115): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(198): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(94): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(98): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(125): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(202): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
 LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/FORCE' specification
 worker.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored
+worker.obj : warning LNK4006: "double * helper::pieceValues" (?pieceValues@helper@@3PANA) already defined in engine.obj; second definition ignored
 helper.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored
+helper.obj : warning LNK4006: "double * helper::pieceValues" (?pieceValues@helper@@3PANA) already defined in engine.obj; second definition ignored
 main.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored
+main.obj : warning LNK4006: "double * helper::pieceValues" (?pieceValues@helper@@3PANA) already defined in engine.obj; second definition ignored
 window.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored
+window.obj : warning LNK4006: "double * helper::pieceValues" (?pieceValues@helper@@3PANA) already defined in engine.obj; second definition ignored
 C:\Users\Andy Wang\source\repos\Chess-Engine\Debug\Chess-Engine.exe : warning LNK4088: image being generated due to /FORCE option; image may not run
   Chess-Engine.vcxproj -> C:\Users\Andy Wang\source\repos\Chess-Engine\Debug\Chess-Engine.exe
