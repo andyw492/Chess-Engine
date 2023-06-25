@@ -36,13 +36,122 @@ void Window::dprint(LPVOID pParam, string s)
 	ReleaseMutex(p->mutex);
 }
 
+void Window::windowSetup(Parameters* p, sf::Font& font, vector<sf::Text>& statsText, Position& currentPosition)
+{
+	if (!font.loadFromFile("ModernSans-Light.otf"))
+	{
+		cout << "font failed to load" << endl;
+	}
+
+
+	float statsYPosition = 30.f;
+	for (int i = 0; i < 12; i++)
+	{
+		sf::Text t;
+		t.setFont(font);
+		t.setCharacterSize(18);
+		t.setFillColor(sf::Color::Black);
+		t.setPosition(sf::Vector2f(650.f, statsYPosition));
+		statsText.push_back(t);
+
+		if (i == 2 || i == 4 || i == 6 || i == 8)
+		{
+			statsYPosition += 50.f;
+		}
+		else
+		{
+			statsYPosition += 30.f;
+		}
+	}
+
+	// construct the board from the initial fen
+	string initialFen = "";
+	WaitForSingleObject(p->mutex, INFINITE);
+	initialFen = p->initialFen;
+	ReleaseMutex(p->mutex);
+
+	char board[8][8];
+	helper::fenToMatrix(helper::splitToVector(initialFen, ' ')[0], board);
+
+	bool initialCastling[4] = { false, false, false, false };
+	string castlingString = helper::splitToVector(initialFen, ' ')[2];
+	for (char c : castlingString)
+	{
+		switch (c)
+		{
+		case 'K': initialCastling[0] = true; break;
+		case 'Q': initialCastling[1] = true; break;
+		case 'k': initialCastling[2] = true; break;
+		case 'q': initialCastling[3] = true; break;
+		default: break;
+		}
+	}
+
+	string gameResult = "";
+
+	WaitForSingleObject(p->mutex, INFINITE);
+	memcpy(p->currentPosition.board, board, 64 * sizeof(char));
+	memcpy(p->currentPosition.castling, initialCastling, 4 * sizeof(bool));
+	currentPosition = p->currentPosition;
+	ReleaseMutex(p->mutex);
+
+	// rectangles that indicate legal moves
+	// stored outside objects map because a vector is more appropriate
+	for (int i = 0; i < 64; i++)
+	{
+		sf::RectangleShape rectangle;
+		rectangle.setSize(sf::Vector2f(70, 70));
+		rectangle.setOutlineColor(sf::Color(150, 191, 255, 170));
+		rectangle.setFillColor(sf::Color::Transparent);
+		rectangle.setOutlineThickness(-3);
+		rectangle.setPosition(0, 0);
+		legalRectangles.push_back(rectangle);
+	}
+}
+
+void Window::printBoard(Parameters* p, Position currentPosition)
+{
+	auto begin = std::chrono::high_resolution_clock::now();
+	map<string, vector<string>> legalMoves = helper::getLegalMoves(currentPosition, true);
+	auto end = std::chrono::high_resolution_clock::now();
+
+	WaitForSingleObject(p->mutex, INFINITE);
+	PRINT("----------------- WINDOW -----------------\n\n", 0);
+
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+			PRINT(string() + currentPosition.board[i][j] + " ", 0);
+		}
+		PRINT("\n", 0);
+	}
+	PRINT("\n", 0);
+
+	for (auto i : legalMoves)
+	{
+		PRINT(i.first + ": ", 0);
+
+		for (int j = 0; j < i.second.size(); j++)
+		{
+			PRINT(i.second[j] + " ", 0);
+		}
+
+		PRINT("\n", 0);
+	}
+	PRINT("\n", 0);
+
+	PRINT("legal moves found in " + helper::roundFloat(float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6, 3) + " ms\n", 0);
+	ReleaseMutex(p->mutex);
+}
+
 void Window::getMouseSquare(sf::Vector2i mousePos, int squareCoords[2])
 {
 	squareCoords[0] = floor((mousePos.y - 30) / 70);
 	squareCoords[1] = floor((mousePos.x - 30) / 70);
 }
 
-vector<string> Window::setPiecePositions(char board[8][8])
+vector<string> Window::getPiecePositions(char board[8][8])
 {
 	vector<string> available = { "b1", "b2", "B1", "B2", "k", "K", "n1", "n2", "N1", "N2", "r1", "r2", "R1", "R2" };
 	for (int i = 1; i < 9; i++)
@@ -93,13 +202,119 @@ vector<string> Window::setPiecePositions(char board[8][8])
 	return pieceNames;
 }
 
+void Window::drawObjects(Parameters* p, sf::RenderWindow& window, Position currentPosition)
+{
+	vector<string> piecesToDraw = getPiecePositions(currentPosition.board);
+
+	window.draw(*objects["board_white"]);
+	if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
+	{
+		window.draw(*objects["selectionRectangle"]);
+	}
+
+	for (int i = 0; i < legalRectangles.size(); i++)
+	{
+		if (legalRectangles[i].getPosition().x > 0)
+		{
+			window.draw(legalRectangles[i]);
+		}
+	}
+
+	for (int i = 0; i < piecesToDraw.size(); i++)
+	{
+		window.draw(*objects[piecesToDraw[i]]);
+	}
+}
+
+vector<sf::Text> Window::getStatsText(Parameters* p, sf::Font& font, vector<sf::Text> statsText, std::chrono::steady_clock::time_point engineStart)
+{
+	vector<string> stats;
+
+	for (int i = 0; i < 12; i++)
+	{
+		stats.push_back("0");
+	}
+
+	WaitForSingleObject(p->mutex, INFINITE);
+
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	stats[0] = to_string(float(std::chrono::duration_cast<std::chrono::nanoseconds>(currentTime - engineStart).count()) / 1e9);
+	stats[1] = to_string(p->depth0Progress) + " / " + to_string(p->depth0Children);
+	stats[2] = to_string(p->depth1Progress) + " / " + to_string(p->depth1Children);
+	stats[3] = to_string(p->positionsEvaluated);
+	stats[4] = to_string(p->totalPositionsEvaluated);
+	stats[5] = to_string(p->nodesCreated);
+	stats[6] = to_string(p->nodesDeleted);
+	stats[9] = to_string(p->nextPositionsCache.size());
+	stats[10] = to_string(p->foundInCache);
+
+	ReleaseMutex(p->mutex);
+
+	for (int i = 0; i < stats.size(); i++)
+	{
+		size_t found = stats[i].find(".");
+		if (found != string::npos)
+		{
+			stats[i] = stats[i].substr(0, found + 4);
+		}
+
+		string statString = "";
+		switch (i)
+		{
+		case 0:
+			statString = "Elapsed: " + stats[i] + " seconds";
+			break;
+		case 1:
+			statString = "Depth 0: " + stats[i];
+			break;
+		case 2:
+			statString = "Depth 1: " + stats[i];
+			break;
+		case 3:
+			statString = "Positions evaluated: " + stats[i];
+			break;
+		case 4:
+			statString = "(Total: " + stats[i] + ")";
+			break;
+		case 5:
+			statString = "Nodes created: " + stats[i];
+			break;
+		case 6:
+			statString = "Nodes deleted: " + stats[i];
+			break;
+		case 7:
+			statString = "Nodes pruned: " + stats[i];
+			break;
+		case 8:
+			statString = "(Time saved: " + stats[i] + " seconds)";
+			break;
+		case 9:
+			statString = "Next position cache size: " + stats[i];
+			break;
+		case 10:
+			statString = "Found in cache: " + stats[i];
+			break;
+		case 11:
+			statString = "(Time saved: " + stats[i] + " seconds)";
+			break;
+
+		default:
+			break;
+		}
+
+		statsText[i].setString(statString);
+	}
+
+	return statsText;
+}
+
 UINT Window::start(LPVOID pParam)
 {
 	Parameters *p = ((Parameters*)pParam);
 
-	WaitForSingleObject(p->mutex, INFINITE);
-	printf("windowThread %d started\n", GetCurrentThreadId());
-	ReleaseMutex(p->mutex);
+	//WaitForSingleObject(p->mutex, INFINITE);
+	//printf("windowThread %d started\n", GetCurrentThreadId());
+	//ReleaseMutex(p->mutex);
 
 	display(pParam);
 
@@ -112,9 +327,9 @@ UINT Window::start(LPVOID pParam)
 	ReleaseSemaphore(p->finished, 1, NULL);
 	WaitForSingleObject(p->eventQuit, INFINITE);
 
-	WaitForSingleObject(p->mutex, INFINITE);
-	printf("windowThread %d quitting on event\n", GetCurrentThreadId());
-	ReleaseMutex(p->mutex);
+	//WaitForSingleObject(p->mutex, INFINITE);
+	//printf("windowThread %d quitting on event\n", GetCurrentThreadId());
+	//ReleaseMutex(p->mutex);
 
 	return 0;
 }
@@ -250,10 +465,6 @@ void Window::initializeObjects(LPVOID pParam, char board[8][8])
 
 			// number
 			default:
-				//dprint(pParam, "char" + to_string(char(parts[i][j])));
-				//dprint(pParam, "number" + to_string(char(parts[i][j] - '0')));
-				//j += int(partsString[j] - '0');
-				//dprint(pParam, "j moved to " + to_string(j));
 				dprint(pParam, "error bad char " + to_string(board[y][x]));
 				break;
 			}
@@ -268,35 +479,6 @@ void Window::initializeObjects(LPVOID pParam, char board[8][8])
 		
 	}
 
-	//int xIndex = 0;
-	//int yIndex = 0;
-	//for (auto i : *objects)
-	//{
-	//	if (i.first == "board_white")
-	//	{
-	//		((sf::Sprite*)i.second)->setScale(sf::Vector2f(0.8f, 0.8f));
-	//		((sf::Sprite*)i.second)->setPosition(sf::Vector2f(30.f, 30.f));
-	//	}
-	//	else
-	//	{
-	//		((sf::Sprite*)i.second)->setPosition(sf::Vector2f(xIndex * 73.4 + 37.f, yIndex * 73.4 + 37.f));
-
-	//		xIndex++;
-	//		if (xIndex == 8)
-	//		{
-	//			yIndex++;
-	//			xIndex = 0;
-	//		}
-	//	}
-
-	//}
-
-	// polymorphism yay
-	//sf::CircleShape* shape = new sf::CircleShape(10.f);
-	//shape->setFillColor(sf::Color::Blue);
-	//shape->setPosition(sf::Vector2f(500.f, 500.f));
-	//(*objects)["circle"] = shape;
-
 	sf::RectangleShape* rectangle = new sf::RectangleShape();
 	rectangle->setSize(sf::Vector2f(70, 70));
 	rectangle->setOutlineColor(sf::Color::Blue);
@@ -306,205 +488,294 @@ void Window::initializeObjects(LPVOID pParam, char board[8][8])
 	objects["selectionRectangle"] = rectangle;
 }
 
+void Window::updateWindow(Parameters* p, sf::RenderWindow& window, vector<sf::Text>& statsText, sf::Font& font, std::chrono::steady_clock::time_point engineStart, Position& currentPosition)
+{
+	// get the current board and update stats
+	bool playerToMove = false;
+	WaitForSingleObject(p->mutex, INFINITE);
+	playerToMove = p->playerToMove;
+	ReleaseMutex(p->mutex);
+
+	if (!playerToMove)
+	{
+		statsText = getStatsText(p, font, statsText, engineStart);
+	}
+
+	// draw the current board's objects to window
+	window.clear(sf::Color::White);
+	drawObjects(p, window, currentPosition);
+
+	for (int i = 0; i < statsText.size(); i++)
+	{
+		window.draw(statsText[i]);
+	}
+
+	window.display();
+
+	if (playerToMove)
+	{
+		WaitForSingleObject(p->mutex, INFINITE);
+		currentPosition = p->currentPosition;
+		string gameResult = p->gameResult;
+		ReleaseMutex(p->mutex);
+
+		// check if the game ended
+		if (gameResult.length() > 0)
+		{
+			Sleep(2000);
+			window.close();
+		}
+	}
+}
+
+bool Window::handleBoardClick(Parameters* p, Position& currentPosition, int (&selection)[2], sf::Vector2i mousePos)
+{
+	int squareY = floor((mousePos.y - 30) / 70);
+	int squareX = floor((mousePos.x - 30) / 70);
+
+	int targetSquare[2];
+	getMouseSquare(mousePos, targetSquare);
+
+	//if (dpr)
+	//{
+	//	cout << "target square " << targetSquare[0] << " " << targetSquare[1] << endl;
+	//	cout << "selection " << selection << endl;
+	//}
+
+	// select the players piece if selection string is empty
+	if (selection[0] == -1 && currentPosition.board[targetSquare[0]][targetSquare[1]] >= 65 && currentPosition.board[targetSquare[0]][targetSquare[1]] <= 90)
+	{
+		((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(squarePos[squareY][squareX]);
+		selection[0] = squareY;
+		selection[1] = squareX;
+
+		// set legal rectangle positions
+		string from = to_string(selection[0]) + to_string(selection[1]);
+		bool castling[4];
+		//string enpassant = "";
+		WaitForSingleObject(p->mutex, INFINITE);
+		Position position = p->currentPosition;
+		memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
+		//enpassant = p->currentPosition.enpassant;
+		ReleaseMutex(p->mutex);
+		vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
+
+		for (int i = 0; i < legalMoves.size(); i++)
+		{
+			int legalY = legalMoves[i][0] - 48;
+			int legalX = legalMoves[i][1] - 48;
+			legalRectangles[i].setPosition(squarePos[legalY][legalX]);
+		}
+	}
+
+	// attempt to move the players piece if selection string is full
+	else
+	{
+		bool validMove = true;
+		bool sameSquareSelected = false;
+
+		// if the target square is the same as the selection square, then deselect
+		if (selection[0] == targetSquare[0] && selection[1] == targetSquare[1])
+		{
+			sameSquareSelected = true;
+			validMove = false;
+			((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+			for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
+			selection[0] = -1;
+		}
+
+		// check if the target square is a legal move for the selected piece
+		string from = to_string(selection[0]) + to_string(selection[1]);
+		string to = to_string(targetSquare[0]) + to_string(targetSquare[1]);
+
+		// deselect if not legal
+		bool castling[4];
+		//string enpassant = "";
+
+		vector<string> legalMoves = helper::getLegalMoves(currentPosition, true)[from];
+		if (find(legalMoves.begin(), legalMoves.end(), to) == legalMoves.end())
+		{
+			validMove = false;
+			((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+			for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
+			selection[0] = -1;
+		}
+
+		if (validMove)
+		{
+			// check for castling
+			// 0 == normal move
+			// 1 == white castles kingside
+			// 2 == white castles queenside
+			// 3 == black castles kingside
+			// 4 == black castles queenside
+
+			int moveType = 0;
+			if (from == "74" && to == "76") { moveType = 1; }
+			if (from == "74" && to == "72") { moveType = 2; }
+			if (from == "04" && to == "06") { moveType = 3; }
+			if (from == "04" && to == "02") { moveType = 4; }
+
+			// modify the board and send to parameters
+			switch (moveType)
+			{
+			case 0:
+			{
+				char targetPrev = currentPosition.board[targetSquare[0]][targetSquare[1]];
+				char movedPiece = currentPosition.board[selection[0]][selection[1]];
+				currentPosition.board[selection[0]][selection[1]] = ' ';
+				currentPosition.board[targetSquare[0]][targetSquare[1]] = movedPiece;
+
+				// if a pawn is on a promoting square, then replace it with a queen
+				for (int x = 0; x < 8; x++)
+				{
+					if (currentPosition.board[0][x] == 'P') { currentPosition.board[0][x] = 'Q'; }
+					if (currentPosition.board[7][x] == 'p') { currentPosition.board[7][x] = 'q'; }
+				}
+
+				// if a pawn moved forward two squares, then set an en passant square
+				// otherwise, clear the en passant square
+				//if (board[targetSquare[0]][targetSquare[1]] == 'P' && selection[0] - targetSquare[0] == 2)
+				//{
+				//	enpassant = to_string(targetSquare[0] + 1) + to_string(targetSquare[1]);
+				//}
+				//else if (board[targetSquare[0]][targetSquare[1]] == 'p' && selection[0] - targetSquare[0] == -2)
+				//{
+				//	enpassant = to_string(targetSquare[0] - 1) + to_string(targetSquare[1]);
+				//}
+				//else
+				//{
+				//	enpassant = "";
+				//}
+
+				// if a pawn moved to an empty square, then clear the square behind it (to handle en passant captures)
+				if (currentPosition.board[targetSquare[0]][targetSquare[1]] == 'P' && targetPrev == ' ')
+				{
+					currentPosition.board[targetSquare[0] + 1][targetSquare[1]] = ' ';
+				}
+				if (currentPosition.board[targetSquare[0]][targetSquare[1]] == 'p' && targetPrev == ' ')
+				{
+					currentPosition.board[targetSquare[0] - 1][targetSquare[1]] = ' ';
+				}
+
+				break;
+			}
+			case 1:
+			{
+				currentPosition.board[7][4] = ' ';
+				currentPosition.board[7][5] = 'R';
+				currentPosition.board[7][6] = 'K';
+				currentPosition.board[7][7] = ' ';
+				break;
+			}
+			case 2:
+			{
+				currentPosition.board[7][0] = ' ';
+				currentPosition.board[7][2] = 'K';
+				currentPosition.board[7][3] = 'R';
+				currentPosition.board[7][4] = ' ';
+				break;
+			}
+			case 3:
+			{
+				currentPosition.board[0][4] = ' ';
+				currentPosition.board[0][5] = 'r';
+				currentPosition.board[0][6] = 'k';
+				currentPosition.board[0][7] = ' ';
+				break;
+			}
+			case 4:
+			{
+				currentPosition.board[0][0] = ' ';
+				currentPosition.board[0][2] = 'k';
+				currentPosition.board[0][3] = 'r';
+				currentPosition.board[0][4] = ' ';
+				break;
+			}
+			}
+
+			// modify castling permissions
+			if (from == "74" || from == "77") { currentPosition.castling[0] = false; }
+			if (from == "74" || from == "70") { currentPosition.castling[1] = false; }
+			if (from == "04" || from == "07") { currentPosition.castling[2] = false; }
+			if (from == "04" || from == "00") { currentPosition.castling[3] = false; }
+
+			// clear selection and legal rectangles
+			((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
+			for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
+			selection[0] = -1;
+
+			// indicate that it is the engine's turn
+			return true;
+		}
+
+		// if the move is invalid (i.e. not castled) and a different player piece was clicked
+		// then move the selection square to that piece
+		if (!validMove && currentPosition.board[targetSquare[0]][targetSquare[1]] >= 65 && currentPosition.board[targetSquare[0]][targetSquare[1]] <= 90 && !sameSquareSelected)
+		{
+			((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(squarePos[squareY][squareX]);
+			selection[0] = squareY;
+			selection[1] = squareX;
+
+			// clear and set legal rectangle positions
+			for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
+
+			string from = to_string(selection[0]) + to_string(selection[1]);
+			bool castling[4];
+			//string enpassant = "";
+			WaitForSingleObject(p->mutex, INFINITE);
+			memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
+			Position position = p->currentPosition;
+			//enpassant = p->currentPosition.enpassant;
+			ReleaseMutex(p->mutex);
+			vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
+
+			for (int i = 0; i < legalMoves.size(); i++)
+			{
+				int legalY = legalMoves[i][0] - 48;
+				int legalX = legalMoves[i][1] - 48;
+				legalRectangles[i].setPosition(squarePos[legalY][legalX]);
+			}
+		}
+
+	}
+
+	return false;
+}
+
 void Window::display(LPVOID pParam)
 {
 	Parameters *p = ((Parameters*)pParam);
 
-	// construct the board from the initial fen
-	string initialFen = "";
-	WaitForSingleObject(p->mutex, INFINITE);
-	initialFen = p->initialFen;
-	ReleaseMutex(p->mutex);
-
-	sf::Font font;
-	font.loadFromFile("ModernSans-Light.otf");
-
-	sf::Text text;
-	text.setFont(font);
-	text.setCharacterSize(24);
-	text.setFillColor(sf::Color::Black);
-	text.setPosition(sf::Vector2f(650.f, 50.f));
-
-	char board[8][8];
-	helper::fenToMatrix(initialFen, board);
-
-	WaitForSingleObject(p->mutex, INFINITE);
-	memcpy(p->currentPosition.board, board, 64 * sizeof(char));
-	ReleaseMutex(p->mutex);
-
-	initializeObjects(pParam, board);
-
 	sf::RenderWindow window(sf::VideoMode(1000, 660), "Chess Engine");
 
-	// inside the main loop, between window.clear() and window.display()
-	window.draw(text);
+	sf::Font font;
+	vector<sf::Text> statsText;
 
-	// draw initial objects
-	window.clear(sf::Color::White);
-	window.draw(*objects["board_white"]);
-
-	for (auto i : objects)
-	{
-		if (i.first == "board_white" || i.first == "selectionRectangle") { continue; }
-		window.draw(*i.second);
-	}
-
-	window.draw(text);
-
-	window.display();
-
+	Position currentPosition;
+	string gameResult = "";
 	int selection[2] = { -1, -1 };
-	vector<string> piecesToDraw = setPiecePositions(board);
 
-	// rectangles that indicate legal moves
-	// stored outside objects map because a vector is more appropriate
-	vector<sf::RectangleShape> legalRectangles;
-	for (int i = 0; i < 64; i++)
-	{
-		sf::RectangleShape rectangle;
-		rectangle.setSize(sf::Vector2f(70, 70));
-		rectangle.setOutlineColor(sf::Color(150, 191, 255, 170));
-		rectangle.setFillColor(sf::Color::Transparent);
-		rectangle.setOutlineThickness(-3);
-		rectangle.setPosition(0, 0);
-		legalRectangles.push_back(rectangle);
-	}
+	windowSetup(p, font, statsText, currentPosition);
 
-	int printedLegal = false;
+	initializeObjects(pParam, currentPosition.board);
 
-	//--------------------MAIN WINDOW LOOP--------------------------
+	std::chrono::steady_clock::time_point engineStart = std::chrono::high_resolution_clock::now();
 
+	// main window loop
 	while (window.isOpen())
 	{
-		// draw the current board's objects to window
-#pragma region
-		WaitForSingleObject(p->mutex, INFINITE);
-		memcpy(board, p->currentPosition.board, 64 * sizeof(char));
-		ReleaseMutex(p->mutex);
+		updateWindow(p, window, statsText, font, engineStart, currentPosition);
 
-		piecesToDraw = setPiecePositions(board);
-
-		window.clear(sf::Color::White);
-
-		window.draw(*objects["board_white"]);
-		if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
-		{
-			window.draw(*objects["selectionRectangle"]);
-		}
-
-		for (int i = 0; i < legalRectangles.size(); i++)
-		{
-			if (legalRectangles[i].getPosition().x > 0)
-			{
-				window.draw(legalRectangles[i]);
-			}
-		}
-
-		for (int i = 0; i < piecesToDraw.size(); i++)
-		{
-			window.draw(*objects[piecesToDraw[i]]);
-		}
-
-		window.display();
-
-#pragma endregion
-
-		// check if the game ended
-#pragma region
-		string gameResult = "";
-		WaitForSingleObject(p->mutex, INFINITE);
-		gameResult = p->gameResult;
-		ReleaseMutex(p->mutex);
-		if (gameResult.length() > 0)
-		{
-			text.setString(gameResult);
-
-			// get the positions of the pieces to draw from the current board
-			piecesToDraw = setPiecePositions(board);
-
-			window.clear(sf::Color::White);
-			window.draw(*objects["board_white"]);
-			if (((sf::RectangleShape*)objects["selectionRectangle"])->getPosition().x > 0)
-			{
-				window.draw(*objects["selectionRectangle"]);
-			}
-
-			for (int i = 0; i < piecesToDraw.size(); i++)
-			{
-				window.draw(*objects[piecesToDraw[i]]);
-			}
-
-			window.display();
-
-			window.draw(text);
-			window.display();
-			Sleep(2000);
-			window.close();
-		}
-#pragma endregion
-
-		//-------------------POLL EVENTS----------------------------
 		sf::Event event;
 		while (window.pollEvent(event))
 		{
-			if (dpr)
-			{
-				bool playerToMove = false;
-				WaitForSingleObject(p->mutex, INFINITE);
-				playerToMove = p->playerToMove;
-				ReleaseMutex(p->mutex);
-				if (playerToMove && !printedLegal)
-				{
-					printedLegal = true;
-					bool castling[4];
-					//string enpassant = "";
-					WaitForSingleObject(p->mutex, INFINITE);
-					Position position = p->currentPosition;
-					memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
-					//enpassant = p->currentPosition.enpassant;
-					ReleaseMutex(p->mutex);
-
-					auto begin = std::chrono::high_resolution_clock::now();
-					map<string, vector<string>> legalMoves = helper::getLegalMoves(position, true);
-					auto end = std::chrono::high_resolution_clock::now();
-
-					cout << "----------------- WINDOW -----------------\n" << endl;
-
-					for (int i = 0; i < 8; i++)
-					{
-						for (int j = 0; j < 8; j++)
-						{
-							cout << board[i][j] << " ";
-						}
-						cout << endl;
-					}
-					cout << endl;
-
-					for (auto i : legalMoves)
-					{
-						cout << i.first << ": ";
-						for (int j = 0; j < i.second.size(); j++)
-						{
-							cout << i.second[j] << " ";
-						}
-						cout << endl;
-					}
-					cout << endl;
-
-					printf("legal moves found in %.3f ms\n", float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
-				}
-			}
-
-
 			if (event.type == sf::Event::Closed)
 				window.close();
 
 			else if (event.type == sf::Event::MouseButtonPressed)
 			{
 				sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-
-				int squareY = floor((mousePos.y - 30) / 70);
-				int squareX = floor((mousePos.x - 30) / 70);
 
 				bool clickedInBoard = max(mousePos.x, mousePos.y) < 590 && min(mousePos.x, mousePos.y) >= 30;
 
@@ -525,230 +796,7 @@ void Window::display(LPVOID pParam)
 				// only process a click in the board if players turn
 				if (clickedInBoard && playerToMove && gameResult.length() == 0)
 				{
-					// get the current board from parameters
-					WaitForSingleObject(p->mutex, INFINITE);
-					memcpy(board, p->currentPosition.board, 64 * sizeof(char));
-					ReleaseMutex(p->mutex);
-
-					int targetSquare[2];
-					getMouseSquare(mousePos, targetSquare);
-
-					//if (dpr)
-					//{
-					//	cout << "target square " << targetSquare[0] << " " << targetSquare[1] << endl;
-					//	cout << "selection " << selection << endl;
-					//}
-
-					// select the players piece if selection string is empty
-					if(selection[0] == -1 && board[targetSquare[0]][targetSquare[1]] >= 65 && board[targetSquare[0]][targetSquare[1]] <= 90)
-					{
-						((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(squarePos[squareY][squareX]);
-						selection[0] = squareY;
-						selection[1] = squareX;
-
-						// set legal rectangle positions
-						string from = to_string(selection[0]) + to_string(selection[1]);
-						bool castling[4];
-						//string enpassant = "";
-						WaitForSingleObject(p->mutex, INFINITE);
-						Position position = p->currentPosition;
-						memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
-						//enpassant = p->currentPosition.enpassant;
-						ReleaseMutex(p->mutex);
-						vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
-
-						for(int i = 0; i < legalMoves.size(); i++)
-						{
-							int legalY = legalMoves[i][0] - 48;
-							int legalX = legalMoves[i][1] - 48;
-							legalRectangles[i].setPosition(squarePos[legalY][legalX]);
-						}
-					}
-
-					// attempt to move the players piece if selection string is full
-					else
-					{
-						bool validMove = true;
-						bool sameSquareSelected = false;
-
-						// if the target square is the same as the selection square, then deselect
-						if (selection[0] == targetSquare[0] && selection[1] == targetSquare[1])
-						{
-							sameSquareSelected = true;
-							validMove = false;
-							((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
-							for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
-							selection[0] = -1;
-						}
-
-						// check if the target square is a legal move for the selected piece
-						string from = to_string(selection[0]) + to_string(selection[1]);
-						string to = to_string(targetSquare[0]) + to_string(targetSquare[1]);
-						
-						// deselect if not legal
-						bool castling[4];
-						//string enpassant = "";
-						WaitForSingleObject(p->mutex, INFINITE);
-						memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
-						Position position = p->currentPosition;
-						//enpassant = p->currentPosition.enpassant;
-						ReleaseMutex(p->mutex);
-						vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
-						if (find(legalMoves.begin(), legalMoves.end(), to) == legalMoves.end())
-						{
-							validMove = false;
-							((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
-							for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
-							selection[0] = -1;
-						}
-
-						if (validMove)
-						{
-							// check for castling
-							// 0 == normal move
-							// 1 == white castles kingside
-							// 2 == white castles queenside
-							// 3 == black castles kingside
-							// 4 == black castles queenside
-
-							int moveType = 0;
-							if (from == "74" && to == "76") { moveType = 1; }
-							if (from == "74" && to == "72") { moveType = 2; }
-							if (from == "04" && to == "06") { moveType = 3; }
-							if (from == "04" && to == "02") { moveType = 4; }
-
-							// modify the board and send to parameters
-							switch (moveType)
-							{
-							case 0:
-							{
-								char targetPrev = board[targetSquare[0]][targetSquare[1]];
-								char movedPiece = board[selection[0]][selection[1]];
-								board[selection[0]][selection[1]] = ' ';
-								board[targetSquare[0]][targetSquare[1]] = movedPiece;
-
-								// if a pawn is on a promoting square, then replace it with a queen
-								for (int x = 0; x < 8; x++)
-								{
-									if (board[0][x] == 'P') { board[0][x] = 'Q'; }
-									if (board[7][x] == 'p') { board[7][x] = 'q'; }
-								}
-
-								// if a pawn moved forward two squares, then set an en passant square
-								// otherwise, clear the en passant square
-								//if (board[targetSquare[0]][targetSquare[1]] == 'P' && selection[0] - targetSquare[0] == 2)
-								//{
-								//	enpassant = to_string(targetSquare[0] + 1) + to_string(targetSquare[1]);
-								//}
-								//else if (board[targetSquare[0]][targetSquare[1]] == 'p' && selection[0] - targetSquare[0] == -2)
-								//{
-								//	enpassant = to_string(targetSquare[0] - 1) + to_string(targetSquare[1]);
-								//}
-								//else
-								//{
-								//	enpassant = "";
-								//}
-
-								// if a pawn moved to an empty square, then clear the square behind it (to handle en passant captures)
-								if (board[targetSquare[0]][targetSquare[1]] == 'P' && targetPrev == ' ')
-								{
-									board[targetSquare[0] + 1][targetSquare[1]] = ' ';
-								}
-								if (board[targetSquare[0]][targetSquare[1]] == 'p' && targetPrev == ' ')
-								{
-									board[targetSquare[0] - 1][targetSquare[1]] = ' ';
-								}
-
-								break;
-							}
-							case 1:
-							{
-								board[7][4] = ' ';
-								board[7][5] = 'R';
-								board[7][6] = 'K';
-								board[7][7] = ' ';
-								break;
-							}
-							case 2:
-							{
-								board[7][0] = ' ';
-								board[7][2] = 'K';
-								board[7][3] = 'R';
-								board[7][4] = ' ';
-								break;
-							}
-							case 3:
-							{
-								board[0][4] = ' ';
-								board[0][5] = 'r';
-								board[0][6] = 'k';
-								board[0][7] = ' ';
-								break;
-							}
-							case 4:
-							{
-								board[0][0] = ' ';
-								board[0][2] = 'k';
-								board[0][3] = 'r';
-								board[0][4] = ' ';
-								break;
-							}
-							}
-
-							WaitForSingleObject(p->mutex, INFINITE);
-							memcpy(p->currentPosition.board, board, 64 * sizeof(char));
-							ReleaseMutex(p->mutex);
-
-							// modify castling permissions and send to parameters
-							if (from == "74" || from == "77") { castling[0] = false; }
-							if (from == "74" || from == "70") { castling[1] = false; }
-							if (from == "04" || from == "07") { castling[2] = false; }
-							if (from == "04" || from == "00") { castling[3] = false; }
-
-							WaitForSingleObject(p->mutex, INFINITE);
-							memcpy(p->currentPosition.castling, castling, 4 * sizeof(bool));
-							//p->currentPosition.enpassant = enpassant;
-							ReleaseMutex(p->mutex);
-
-							// clear selection and legal rectangles
-							((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(0, 0);
-							for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
-							selection[0] = -1;
-
-							// indicate that it is the engine's turn
-							madeMove = true;
-						}
-
-						// if the move is invalid (i.e. not castled) and a different player piece was clicked
-						// then move the selection square to that piece
-						if (!validMove && board[targetSquare[0]][targetSquare[1]] >= 65 && board[targetSquare[0]][targetSquare[1]] <= 90 && !sameSquareSelected)
-						{
-							((sf::RectangleShape*)objects["selectionRectangle"])->setPosition(squarePos[squareY][squareX]);
-							selection[0] = squareY;
-							selection[1] = squareX;
-
-							// clear and set legal rectangle positions
-							for (int i = 0; i < 64; i++) { legalRectangles[i].setPosition(0, 0); }
-
-							string from = to_string(selection[0]) + to_string(selection[1]);
-							bool castling[4];
-							//string enpassant = "";
-							WaitForSingleObject(p->mutex, INFINITE);
-							memcpy(castling, p->currentPosition.castling, 4 * sizeof(bool));
-							Position position = p->currentPosition;
-							//enpassant = p->currentPosition.enpassant;
-							ReleaseMutex(p->mutex);
-							vector<string> legalMoves = helper::getLegalMoves(position, true)[from];
-
-							for (int i = 0; i < legalMoves.size(); i++)
-							{
-								int legalY = legalMoves[i][0] - 48;
-								int legalX = legalMoves[i][1] - 48;
-								legalRectangles[i].setPosition(squarePos[legalY][legalX]);
-							}
-						}
-
-					}
+					madeMove = handleBoardClick(p, currentPosition, selection, mousePos);
 				}
 
 				// if mouse clicked outside the board
@@ -759,35 +807,20 @@ void Window::display(LPVOID pParam)
 					selection[0] = -1;
 				}
 
-				char printBoard[8][8];
-				WaitForSingleObject(p->mutex, INFINITE);
-				memcpy(printBoard, p->currentPosition.board, 64 * sizeof(char));
-				ReleaseMutex(p->mutex);
-
-				if (dpr && madeMove)
-				{
-					for (int i = 0; i < 8; i++)
-					{
-						for (int j = 0; j < 8; j++)
-						{
-							cout << printBoard[i][j] << " ";
-						}
-						cout << endl;
-					}
-					cout << endl;
-				}
-
-
-
-				// switch to engine's turn if a move was made
+				// switch to engine's turn and reset stats if a move was made
 				if (madeMove)
 				{
 					WaitForSingleObject(p->mutex, INFINITE);
 					p->playerToMove = false;
+					p->currentPosition = currentPosition;
+					p->nodesCreated = 0;
+					p->nodesDeleted = 0;
+					p->positionsEvaluated = 0;
+					p->foundInCache = 0;
 					ReleaseMutex(p->mutex);
-				}
 
-				if (dpr && madeMove) { printedLegal = false; }
+					engineStart = std::chrono::high_resolution_clock::now();
+				}
 			}
 		}
 	}

@@ -25,11 +25,15 @@ public:
 
 	Worker(bool workerPrint, U64 zobristTable[13][64], bool randomize);
 
-	double evaluate(PositionNode* node);
-
 	UINT start(LPVOID pParam);
 
 private:
+
+	double getBestValue(PositionNode* node);
+
+	void evaluateNode(Parameters* p, PositionNode* node);
+
+	void deleteNode(Parameters* p, PositionNode* node);
 
 	U64 zobristTable[13][64];
 

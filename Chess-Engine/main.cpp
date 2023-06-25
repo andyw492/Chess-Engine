@@ -155,12 +155,6 @@ int main(void)
 
 	string fen = "";
 
-	// starting position
-	fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-	// misc
-	//fen = "rnbqkbnr/pppppppp/8/8/3PP3/2N1BQ2/PPP2PPP/R3KBNR w KQkq - 0 1";
-
 	p.maxDepth = 4;
 	p.workerRandomize = true;
 
@@ -191,17 +185,36 @@ int main(void)
 	//printf("%d legal moves found in %.3f ms\n", nextPositions.size(), float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
 	//return 0;
 
-	p.initialFen = helper::splitToVector(fen, ' ')[0];
+	// starting position
+	fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 	// debug
-	int debugVal = 3;
-	p.windowPrint = debugVal % 2 == 0;
-	p.enginePrint = debugVal % 3 == 0;
-	p.workerPrint = debugVal % 5 == 0;
+	if (0)
+	{
+		fen = "r1bqk1nr/2pp1ppp/p7/1p6/3pP3/1B1P4/PPPN1PPP/R2QK2R w KQkq - 0 1";
+		fen = "r1b1k1nr/2pp1ppp/p7/1p6/3pP3/1B1P4/PPP1qPPP/7K w kq - 0 1";
+	}
+	p.initialFen = fen;
+
+	// debug
+	vector<int> debugPrint
+	{
+		1
+		,0
+		,0
+		,0
+		,0
+	};
+
+	/*
+		0 - window board pieces
+		1 - node creation/deletion
+		2 - bad moves
+	*/
+
+	p.debugPrint = debugPrint;
 
 	srand(time(0));
-
-
 
 	handles[0] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)engineThread, &p, 0, NULL);
 	handles[1] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)windowThread, &p, 0, NULL);

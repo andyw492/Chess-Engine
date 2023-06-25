@@ -2,9 +2,6 @@
 #define helper_h
 
 #define U64 unsigned long long
-#define setBit(bitboard, square) ((bitboard) |= (1ULL << (square)))
-#define getBit(bitboard, square) ((bitboard) & (1ULL << (square)))
-#define popBit(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
 
 #define WHITEPAWN 0
 #define WHITEKNIGHT 1
@@ -43,14 +40,24 @@
 #define ROW6BITBOARD 0x00FF000000000000
 #define ROW7BITBOARD 0xFF00000000000000
 
+#define setBit(bitboard, square) ((bitboard) |= (1ULL << (square)))
+#define getBit(bitboard, square) ((bitboard) & (1ULL << (square)))
+#define popBit(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
+
+#define PRINT(str, label) if (p->debugPrint[label]) { WaitForSingleObject(p->mutex, INFINITE); cout << str; ReleaseMutex(p->mutex); }
+#define PRINTNOLOCK(str, label) if (p->debugPrint[label]) { cout << str; }
+
 #include <vector>
 #include <string>
 #include <map>
 #include <ctime>
+#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <stdint.h>
 #include <cassert>
+#include <iomanip>
+#include <sstream>
 
 #include "position.h"
 
@@ -69,6 +76,8 @@ namespace helper
 	double pieceValues[12] = { 1, 3, 3, 5, 9, 0, -1, -3, -3, -5, -9, 0 };
 
 	vector<string> splitToVector(string str, char del);
+
+	string roundFloat(float f, int r);
 
 	void fenToMatrix(string fen, char matrix[8][8]);
 

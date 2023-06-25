@@ -35,17 +35,23 @@ public:
 
 	Engine(bool enginePrint, U64 zobristTable[13][64]);
 
+	UINT start(LPVOID pParam);
+
+private:
+
 	void startClock();
-	void printTime();
+	//void printTime();
 
 	U64 getStartingHashValue(vector<U64> position);
 	int getStartingEvaluation(vector<U64> position);
 
-	void deletePositionTree(PositionNode* node);
+	bool checkGameEnded(Parameters* p, Position currentPosition, bool engineToMove);
 
-	UINT start(LPVOID pParam);
+	vector<U64> findBestPosition(Parameters* p, Position currentPosition, PositionNode* root);
 
-private:
+	void deletePositionTree(Parameters* p, PositionNode* node);
+
+	void endEngineTurn(Parameters* p, vector<U64> bestPosition);
 
 	U64 zobristTable[13][64];
 

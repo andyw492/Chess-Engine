@@ -26,6 +26,13 @@ vector<string> helper::splitToVector(string str, char del)
 	return splitResult;
 }
 
+string helper::roundFloat(float f, int r)
+{
+	std::stringstream stream;
+	stream << std::fixed << std::setprecision(r) << f;
+	return stream.str();
+}
+
 void helper::fenToMatrix(string fen, char matrix[8][8])
 {
 	// replace numbers with spaces, e.g. "4" -> "    " (" " * 4)
@@ -169,11 +176,6 @@ Position helper::getNewPosition(Position before, string from, string to)
 	if (from == "74" || from == "70") { newPosition.castling[1] = false; changed = true; }
 	if (from == "04" || from == "07") { newPosition.castling[2] = false; changed = true; }
 	if (from == "04" || from == "00") { newPosition.castling[3] = false; changed = true; }
-
-	if (changed)
-	{
-		cout << "";
-	}
 
 	memcpy(newPosition.board, board, 64 * sizeof(char));
 
