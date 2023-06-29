@@ -58,6 +58,7 @@
 #include <cassert>
 #include <iomanip>
 #include <sstream>
+#include <set>
 
 #include "position.h"
 
@@ -69,6 +70,7 @@ using std::remove;
 using std::cout;
 using std::endl;
 using std::find;
+using std::set;
 
 namespace helper
 {

@@ -149,9 +149,15 @@ vector<U64> Engine::findBestPosition(Parameters* p, Position currentPosition, Po
 		vector<vector<U64>> positionsFromLastEnginePosition = helper::getNextPositions(lastEnginePosition, true, zobristTable);
 		vector<U64> playerPosition = helper::positionToU64(currentPosition);
 
+		PRINT("last engine\n\n", 2);
+		//helper::printBoard(lastEnginePosition);
+
+		PRINT("player\n\n", 2);
+		//helper::printBoard(playerPosition);
+		PRINT("candidates\n\n", 2);
+
 		for (int i = 0; i < positionsFromLastEnginePosition.size(); i++)
 		{
-			//printf("from last engine position\n");
 			//helper::printBoard(positionsFromLastEnginePosition[i]);
 
 			bool match = true;
@@ -582,7 +588,7 @@ UINT Engine::start(LPVOID pParam)
 	ReleaseMutex(p->mutex);
 
 	// main engine loop
-	while(true)
+	while (true)
 	{
 		// check if window closed or game ended
 		bool windowClosed = false;
@@ -603,7 +609,12 @@ UINT Engine::start(LPVOID pParam)
 		{
 			continue;
 		}
-		
+
+		WaitForSingleObject(p->mutex, INFINITE);
+		p->deleteSignal = false;
+		p->readyToDelete.clear();
+		ReleaseMutex(p->mutex);
+
 		Position currentPosition;
 		WaitForSingleObject(p->mutex, INFINITE);
 		currentPosition = p->currentPosition;
@@ -625,6 +636,24 @@ UINT Engine::start(LPVOID pParam)
 		//{
 		//	printf("engine move found in %.3f ms\n", float(std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()) / 1e6);
 		//}
+
+		WaitForSingleObject(p->mutex, INFINITE);
+		p->deleteSignal = true;
+		ReleaseMutex(p->mutex);
+
+		while (true)
+		{
+			WaitForSingleObject(p->mutex, INFINITE);
+			if (p->readyToDelete.size() == p->workerCount)
+			{
+				ReleaseMutex(p->mutex);
+				break;
+			}
+			else
+			{
+				ReleaseMutex(p->mutex);
+			}
+		}
 
 		begin = std::chrono::high_resolution_clock::now();
 

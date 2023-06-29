@@ -267,6 +267,14 @@ UINT Worker::start(LPVOID pParam)
 
 	while (true)
 	{
+		// if delete signal is on, signal back that worker is ready to delete
+		WaitForSingleObject(p->mutex, INFINITE);
+		if (p->deleteSignal)
+		{
+			p->readyToDelete.insert(GetCurrentThreadId());
+		}
+		ReleaseMutex(p->mutex);
+
 		// check if window closed or game ended
 		bool windowClosed = false;
 		string gameResult = "";
@@ -278,7 +286,7 @@ UINT Worker::start(LPVOID pParam)
 		PositionNode* node = nullptr;
 
 		WaitForSingleObject(p->mutex, INFINITE);
-		if (!p->toExpand.empty())
+		if (!p->deleteSignal && !p->toExpand.empty())
 		{
 			toEvaluate = p->toExpand.top();
 			p->toExpand.pop();
@@ -313,11 +321,11 @@ UINT Worker::start(LPVOID pParam)
 		{
 			evaluateNode(p, node);
 		}
-		else if(toDelete != nullptr)
+		else if (toDelete != nullptr)
 		{
 			deleteNode(p, node);
 		}
-		
+
 	}
 
 	// thread exit

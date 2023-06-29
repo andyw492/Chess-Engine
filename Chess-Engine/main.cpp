@@ -156,6 +156,7 @@ int main(void)
 	string fen = "";
 
 	p.maxDepth = 4;
+	p.workerCount = workerCount;
 	p.workerRandomize = true;
 
 	vector<U64> board = fenToBoard(helper::splitToVector(fen, ' ')[0]);
@@ -191,15 +192,14 @@ int main(void)
 	// debug
 	if (0)
 	{
-		fen = "r1bqk1nr/2pp1ppp/p7/1p6/3pP3/1B1P4/PPPN1PPP/R2QK2R w KQkq - 0 1";
-		fen = "r1b1k1nr/2pp1ppp/p7/1p6/3pP3/1B1P4/PPP1qPPP/7K w kq - 0 1";
+		fen = "r1bqkb1r/ppp2ppp/2np1n2/4p3/4P3/2NPB3/PPP2PPP/R2QKB1R w KQkq - 0 1";
 	}
 	p.initialFen = fen;
 
 	// debug
 	vector<int> debugPrint
 	{
-		1
+		0
 		,0
 		,0
 		,0

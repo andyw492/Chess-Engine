@@ -308,32 +308,6 @@ vector<sf::Text> Window::getStatsText(Parameters* p, sf::Font& font, vector<sf::
 	return statsText;
 }
 
-UINT Window::start(LPVOID pParam)
-{
-	Parameters *p = ((Parameters*)pParam);
-
-	//WaitForSingleObject(p->mutex, INFINITE);
-	//printf("windowThread %d started\n", GetCurrentThreadId());
-	//ReleaseMutex(p->mutex);
-
-	display(pParam);
-
-	// tell engine that window is closed
-	WaitForSingleObject(p->mutex, INFINITE);
-	p->windowClosed = true;
-	ReleaseMutex(p->mutex);
-
-	// thread exit
-	ReleaseSemaphore(p->finished, 1, NULL);
-	WaitForSingleObject(p->eventQuit, INFINITE);
-
-	//WaitForSingleObject(p->mutex, INFINITE);
-	//printf("windowThread %d quitting on event\n", GetCurrentThreadId());
-	//ReleaseMutex(p->mutex);
-
-	return 0;
-}
-
 void Window::initializeObjects(LPVOID pParam, char board[8][8])
 {
 	Parameters *p = ((Parameters*)pParam);
@@ -824,4 +798,30 @@ void Window::display(LPVOID pParam)
 			}
 		}
 	}
+}
+
+UINT Window::start(LPVOID pParam)
+{
+	Parameters *p = ((Parameters*)pParam);
+
+	//WaitForSingleObject(p->mutex, INFINITE);
+	//printf("windowThread %d started\n", GetCurrentThreadId());
+	//ReleaseMutex(p->mutex);
+
+	display(pParam);
+
+	// tell engine that window is closed
+	WaitForSingleObject(p->mutex, INFINITE);
+	p->windowClosed = true;
+	ReleaseMutex(p->mutex);
+
+	// thread exit
+	ReleaseSemaphore(p->finished, 1, NULL);
+	WaitForSingleObject(p->eventQuit, INFINITE);
+
+	//WaitForSingleObject(p->mutex, INFINITE);
+	//printf("windowThread %d quitting on event\n", GetCurrentThreadId());
+	//ReleaseMutex(p->mutex);
+
+	return 0;
 }

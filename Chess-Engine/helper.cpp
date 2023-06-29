@@ -2089,6 +2089,22 @@ void helper::printBoard(vector<U64> board)
 		printf("\n");
 	}
 
+	U64 additional = board[12];
+	string additionalString = "";
+
+	additionalString += (getBit(additional, 0) ? "White to move\n" : "Black to move\n");
+
+	additionalString += "Castling: ";
+
+	string castlingString = "";
+	castlingString = (getBit(additional, 1) ? "K" : "") + castlingString;
+	castlingString = (getBit(additional, 2) ? "Q" : "") + castlingString;
+	castlingString = (getBit(additional, 3) ? "k" : "") + castlingString;
+	castlingString = (getBit(additional, 4) ? "q" : "") + castlingString;
+	additionalString += castlingString + "\n";
+
+	printf("%s", additionalString.c_str());
+
 	printf("-----------------------\n");
 }
 
@@ -3091,12 +3107,12 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 							vector<U64> newBoard = board;
 
 							popBit(newBoard[WHITEKING], startSquare);
-							setBit(newBoard[WHITEKING], 62);
+							setBit(newBoard[WHITEKING], 58);
 							popBit(newBoard[WHITEROOK], 56);
 							setBit(newBoard[WHITEROOK], 59);
 
 							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][62];
+							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][58];
 							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][56];
 							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][59];
 

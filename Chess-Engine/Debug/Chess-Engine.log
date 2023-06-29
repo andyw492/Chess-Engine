@@ -1,8 +1,34 @@
 ﻿  engine.cpp
 c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(33): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(152): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(387): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(399): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(159): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(393): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\engine.cpp(405): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+  helper.cpp
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(41): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(45): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(250): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(594): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(911): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(949): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(993): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1136): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1283): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1317): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1654): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(1797): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2154): warning C4554: '|': check operator precedence for possible error; use parentheses to clarify precedence
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2309): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2343): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2499): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2530): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2638): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2669): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2775): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2818): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2964): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(2995): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(3234): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\helper.cpp(3280): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
   main.cpp
 c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(94): warning C4018: '<': signed/unsigned mismatch
 c:\users\andy wang\source\repos\chess-engine\chess-engine\main.cpp(98): warning C4018: '<': signed/unsigned mismatch
@@ -18,13 +44,17 @@ c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(184): warni
 c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(215): warning C4018: '<': signed/unsigned mismatch
 c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(223): warning C4018: '<': signed/unsigned mismatch
 c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(253): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(365): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(508): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(533): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(534): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(563): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(733): warning C4018: '<': signed/unsigned mismatch
-c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(592): warning C4101: 'castling': unreferenced local variable
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(339): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(482): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(507): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(508): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(537): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(707): warning C4018: '<': signed/unsigned mismatch
+c:\users\andy wang\source\repos\chess-engine\chess-engine\window.cpp(566): warning C4101: 'castling': unreferenced local variable
+  worker.cpp
+c:\users\andy wang\source\repos\chess-engine\chess-engine\worker.cpp(139): warning C4305: '=': truncation from 'int' to 'float'
+c:\users\andy wang\source\repos\chess-engine\chess-engine\worker.cpp(143): warning C4305: '=': truncation from 'int' to 'float'
+c:\users\andy wang\source\repos\chess-engine\chess-engine\worker.cpp(166): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
   Generating Code...
 LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/FORCE' specification
 worker.obj : warning LNK4006: "char * helper::pieces" (?pieces@helper@@3PADA) already defined in engine.obj; second definition ignored

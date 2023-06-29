@@ -54,6 +54,10 @@ public:
 
 	stack<char*> toDelete;
 
+	int workerCount;
+	bool deleteSignal;
+	set<DWORD> readyToDelete;
+
 	bool windowPrint = false;
 	bool enginePrint = false;
 	bool workerPrint = false;
