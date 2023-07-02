@@ -40,7 +40,7 @@ public:
 	U64 zobristTable[13][64];
 	U64 startingHashValue = 0ULL;
 	unordered_map<U64, vector<vector<U64>>> nextPositionsCache;
-	unordered_map<U64, vector<U64>> positionsCache;
+	bool startedClear;
 
 	vector<U64> lastEnginePosition;
 

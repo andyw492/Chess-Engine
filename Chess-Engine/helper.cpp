@@ -2907,9 +2907,9 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 				}
 			}
 
-			break;
 		}
-
+		break;
+	
 		case 'Q':
 		case 'q':
 		{
@@ -3054,146 +3054,14 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 		case 'K':
 		case 'k':
 		{
-			U64 currentPieceBitBoard;
-			if (currentPiece == 'K') { currentPieceBitBoard = board[WHITEKING]; }
-			else { currentPieceBitBoard = board[BLACKKING]; }
+			// regular movement
+			U64 allyPieceBitBoard = (currentPiece == 'K' ? board[WHITEROOK] : board[BLACKROOK]);
+			U64 enemyPieceBitBoard = (currentPiece == 'K' ? board[BLACKROOK] : board[WHITEROOK]);
 
 			for (int startSquare = 0; startSquare < 64; startSquare++)
 			{
-				if (getBit(currentPieceBitBoard, startSquare))
+				if (getBit(allyPieceBitBoard, startSquare) || getBit(enemyPieceBitBoard, startSquare))
 				{
-					// castling
-					if (currentPiece == 'K' && startSquare == 60)
-					{
-						bool kingsideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
-						for (int castleSquare = 61; castleSquare < 63; castleSquare++)
-						{
-							kingsideLegal = (kingsideLegal && !getBit(allyPieces, castleSquare) && !getBit(enemyPieces, castleSquare));
-						}
-
-						if (kingsideLegal)
-						{
-							vector<U64> newBoard = board;
-
-							popBit(newBoard[WHITEKING], startSquare);
-							setBit(newBoard[WHITEKING], 62);
-							popBit(newBoard[WHITEROOK], 63);
-							setBit(newBoard[WHITEROOK], 61);
-
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][62];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][63];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][61];
-
-							popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
-							popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
-							setBit(newBoard[BOARDEXTRA], LASTCASTLEWHITEKINGSIDE);
-
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEKINGSIDE];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEQUEENSIDE];
-
-							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
-							nextPositions[0].push_back(newBoard);
-						}
-
-						bool queensideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
-						for (int castleSquare = 57; castleSquare < 60; castleSquare++)
-						{
-							queensideLegal = (queensideLegal && !getBit(allyPieces, castleSquare) && !getBit(enemyPieces, castleSquare));
-						}
-
-						if (queensideLegal)
-						{
-							vector<U64> newBoard = board;
-
-							popBit(newBoard[WHITEKING], startSquare);
-							setBit(newBoard[WHITEKING], 58);
-							popBit(newBoard[WHITEROOK], 56);
-							setBit(newBoard[WHITEROOK], 59);
-
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][58];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][56];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][59];
-
-							popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
-							popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
-							setBit(newBoard[BOARDEXTRA], LASTCASTLEWHITEQUEENSIDE);
-
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEKINGSIDE];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEQUEENSIDE];
-
-							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
-							nextPositions[0].push_back(newBoard);
-						}
-					}
-
-					if (currentPiece == 'k' && startSquare == 4)
-					{
-						bool kingsideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
-						for (int castleSquare = 5; castleSquare < 7; castleSquare++)
-						{
-							kingsideLegal = (kingsideLegal && !getBit(allyPieces, castleSquare) && !getBit(enemyPieces, castleSquare));
-						}
-
-						if (kingsideLegal)
-						{
-							vector<U64> newBoard = board;
-
-							popBit(newBoard[BLACKKING], startSquare);
-							setBit(newBoard[BLACKKING], 6);
-							popBit(newBoard[BLACKROOK], 7);
-							setBit(newBoard[BLACKROOK], 5);
-
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][startSquare];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][6];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKROOK][7];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKROOK][5];
-
-							popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
-							popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
-							setBit(newBoard[BOARDEXTRA], LASTCASTLEBLACKKINGSIDE);
-
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKKINGSIDE];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKQUEENSIDE];
-
-							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
-							nextPositions[0].push_back(newBoard);
-						}
-
-						bool queensideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
-						for (int castleSquare = 1; castleSquare < 4; castleSquare++)
-						{
-							queensideLegal = (queensideLegal && !getBit(allyPieces, castleSquare) && !getBit(enemyPieces, castleSquare));
-						}
-
-						if (queensideLegal)
-						{
-							vector<U64> newBoard = board;
-
-							popBit(newBoard[BLACKKING], startSquare);
-							setBit(newBoard[BLACKKING], 2);
-							popBit(newBoard[BLACKROOK], 0);
-							setBit(newBoard[BLACKROOK], 3);
-
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][startSquare];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][2];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKROOK][0];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKROOK][3];
-
-							popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
-							popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
-							setBit(newBoard[BOARDEXTRA], LASTCASTLEBLACKQUEENSIDE);
-
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKKINGSIDE];
-							newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKQUEENSIDE];
-
-							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
-							nextPositions[0].push_back(newBoard);
-						}
-					}
-
-					// regular movement
 					int moveAmount[8] = { -9, -7, 7, 9, -8, -1, 1, 8 };
 
 					for (int j = 0; j < 8; j++)
@@ -3211,167 +3079,332 @@ vector<vector<U64>> helper::getNextPositions(vector<U64> board, bool whiteToMove
 
 						moveSquare += moveAmount[j];
 
-						if (getBit(allyPieces, moveSquare)) { continue; }
-						else if (getBit(enemyPieces, moveSquare))
+						if (getBit(allyPieceBitBoard, startSquare))
 						{
-							vector<U64> newBoard = board;
-
-							if (currentPiece == 'K')
+							if (getBit(allyPieces, moveSquare)) { continue; }
+							else if (getBit(enemyPieces, moveSquare))
 							{
-								popBit(newBoard[WHITEKING], startSquare);
-								setBit(newBoard[WHITEKING], moveSquare);
+								vector<U64> newBoard = board;
 
-								newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
-								newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][moveSquare];
-
-								for (int j = 6; j < 12; j++)
+								if (currentPiece == 'K')
 								{
-									if (getBit(newBoard[j], moveSquare))
-									{
-										popBit(newBoard[j], moveSquare);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[j][moveSquare];
+									popBit(newBoard[WHITEKING], startSquare);
+									setBit(newBoard[WHITEKING], moveSquare);
 
-										newEvaluation = baseEvaluation - pieceValues[j];
-										if (newEvaluation >= 0)
+									newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
+									newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][moveSquare];
+
+									for (int j = 6; j < 12; j++)
+									{
+										if (getBit(newBoard[j], moveSquare))
 										{
-											newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], EVALUATIONLSB, EVALUATIONLSB + 10, newEvaluation);
-											popBit(newBoard[BOARDEXTRA], NEGATIVEEVALUATION);
+											popBit(newBoard[j], moveSquare);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[j][moveSquare];
+
+											newEvaluation = baseEvaluation - pieceValues[j];
+											if (newEvaluation >= 0)
+											{
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], EVALUATIONLSB, EVALUATIONLSB + 10, newEvaluation);
+												popBit(newBoard[BOARDEXTRA], NEGATIVEEVALUATION);
+											}
+											else
+											{
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], EVALUATIONLSB, EVALUATIONLSB + 10, newEvaluation * -1);
+												setBit(newBoard[BOARDEXTRA], NEGATIVEEVALUATION);
+											}
+											capturedPiece = j % 6;
+											break;
 										}
-										else
+									}
+
+									if (startSquare == 60)
+									{
+										if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE))
 										{
-											newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], EVALUATIONLSB, EVALUATIONLSB + 10, newEvaluation * -1);
-											setBit(newBoard[BOARDEXTRA], NEGATIVEEVALUATION);
+											popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEKINGSIDE];
 										}
-										capturedPiece = j % 6;
-										break;
+
+										if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE))
+										{
+											popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEQUEENSIDE];
+										}
+									}
+								}
+								else
+								{
+									popBit(newBoard[BLACKKING], startSquare);
+									setBit(newBoard[BLACKKING], moveSquare);
+
+									newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][startSquare];
+									newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][moveSquare];
+
+									for (int j = 0; j < 6; j++)
+									{
+										if (getBit(newBoard[j], moveSquare))
+										{
+											popBit(newBoard[j], moveSquare);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[j][moveSquare];
+
+											newEvaluation = baseEvaluation - pieceValues[j];
+											if (newEvaluation >= 0)
+											{
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], EVALUATIONLSB, EVALUATIONLSB + 10, newEvaluation);
+												popBit(newBoard[BOARDEXTRA], NEGATIVEEVALUATION);
+											}
+											else
+											{
+												newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], EVALUATIONLSB, EVALUATIONLSB + 10, newEvaluation * -1);
+												setBit(newBoard[BOARDEXTRA], NEGATIVEEVALUATION);
+											}
+											capturedPiece = j % 6;
+											break;
+										}
+									}
+
+									if (startSquare == 4)
+									{
+										if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE))
+										{
+											popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKKINGSIDE];
+										}
+
+										if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE))
+										{
+											popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKQUEENSIDE];
+										}
 									}
 								}
 
-								if (startSquare == 60)
-								{
-									if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE))
-									{
-										popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEKINGSIDE];
-									}
+								setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
 
-									if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE))
-									{
-										popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEQUEENSIDE];
-									}
-								}
+								nextPositions[capturedPiece].push_back(newBoard);
 							}
 							else
 							{
-								popBit(newBoard[BLACKKING], startSquare);
-								setBit(newBoard[BLACKKING], moveSquare);
+								vector<U64> newBoard = board;
 
-								newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][startSquare];
-								newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][moveSquare];
-
-								for (int j = 0; j < 6; j++)
+								if (currentPiece == 'K')
 								{
-									if (getBit(newBoard[j], moveSquare))
-									{
-										popBit(newBoard[j], moveSquare);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[j][moveSquare];
+									popBit(newBoard[WHITEKING], startSquare);
+									setBit(newBoard[WHITEKING], moveSquare);
 
-										newEvaluation = baseEvaluation - pieceValues[j];
-										if (newEvaluation >= 0)
+									newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
+									newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][moveSquare];
+
+									if (startSquare == 60)
+									{
+										if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE))
 										{
-											newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], EVALUATIONLSB, EVALUATIONLSB + 10, newEvaluation);
-											popBit(newBoard[BOARDEXTRA], NEGATIVEEVALUATION);
+											popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEKINGSIDE];
 										}
-										else
+
+										if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE))
 										{
-											newBoard[BOARDEXTRA] = setBitsFromInt(newBoard[BOARDEXTRA], EVALUATIONLSB, EVALUATIONLSB + 10, newEvaluation * -1);
-											setBit(newBoard[BOARDEXTRA], NEGATIVEEVALUATION);
+											popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEQUEENSIDE];
 										}
-										capturedPiece = j % 6;
-										break;
+									}
+								}
+								else
+								{
+									popBit(newBoard[BLACKKING], startSquare);
+									setBit(newBoard[BLACKKING], moveSquare);
+
+									newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][startSquare];
+									newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][moveSquare];
+
+									if (startSquare == 4)
+									{
+										if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE))
+										{
+											popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKKINGSIDE];
+										}
+
+										if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE))
+										{
+											popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
+											newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKQUEENSIDE];
+										}
 									}
 								}
 
-								if (startSquare == 4)
-								{
-									if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE))
-									{
-										popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKKINGSIDE];
-									}
-
-									if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE))
-									{
-										popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKQUEENSIDE];
-									}
-								}
+								setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
+								nextPositions[0].push_back(newBoard);
 							}
-
-							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
-
-							nextPositions[capturedPiece].push_back(newBoard);
 						}
-						else
+
+						if (getBit(enemyPieceBitBoard, startSquare))
 						{
-							vector<U64> newBoard = board;
-
-							if (currentPiece == 'K')
-							{
-								popBit(newBoard[WHITEKING], startSquare);
-								setBit(newBoard[WHITEKING], moveSquare);
-
-								newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
-								newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][moveSquare];
-
-								if (startSquare == 60)
-								{
-									if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE))
-									{
-										popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEKINGSIDE];
-									}
-
-									if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE))
-									{
-										popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEQUEENSIDE];
-									}
-								}
-							}
-							else
-							{
-								popBit(newBoard[BLACKKING], startSquare);
-								setBit(newBoard[BLACKKING], moveSquare);
-
-								newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][startSquare];
-								newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][moveSquare];
-
-								if (startSquare == 4)
-								{
-									if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE))
-									{
-										popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKKINGSIDE];
-									}
-
-									if (getBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE))
-									{
-										popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
-										newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKQUEENSIDE];
-									}
-								}
-							}
-
-							setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
-							nextPositions[0].push_back(newBoard);
+							setBit(dangerMap, moveSquare);
 						}
 					}
 
-
 				}
 			}
+			
+			//// castling
+			//U64 currentPieceBitBoard;
+			//if (currentPiece == 'K') { currentPieceBitBoard = board[WHITEKING]; }
+			//else { currentPieceBitBoard = board[BLACKKING]; }
+
+			//for (int startSquare = 0; startSquare < 64; startSquare++)
+			//{
+			//	if (getBit(currentPieceBitBoard, startSquare))
+			//	{
+			//		if (currentPiece == 'K' && startSquare == 60)
+			//		{
+			//			bool kingsideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
+			//			for (int castleSquare = 61; castleSquare < 63; castleSquare++)
+			//			{
+			//				kingsideLegal = (kingsideLegal && !getBit(allyPieces, castleSquare) && !getBit(enemyPieces, castleSquare));
+			//			}
+			//			for (int dangerSquare = 60; dangerSquare < 63; dangerSquare++)
+			//			{
+			//				kingsideLegal = (kingsideLegal && !getBit(dangerMap, dangerSquare));
+			//			}
+
+			//			if (kingsideLegal)
+			//			{
+			//				vector<U64> newBoard = board;
+
+			//				popBit(newBoard[WHITEKING], startSquare);
+			//				setBit(newBoard[WHITEKING], 62);
+			//				popBit(newBoard[WHITEROOK], 63);
+			//				setBit(newBoard[WHITEROOK], 61);
+
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][62];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][63];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][61];
+
+			//				popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
+			//				popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
+			//				setBit(newBoard[BOARDEXTRA], LASTCASTLEWHITEKINGSIDE);
+
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEKINGSIDE];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEQUEENSIDE];
+
+			//				setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
+			//				nextPositions[0].push_back(newBoard);
+			//			}
+
+			//			bool queensideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
+			//			for (int castleSquare = 57; castleSquare < 60; castleSquare++)
+			//			{
+			//				queensideLegal = (queensideLegal && !getBit(allyPieces, castleSquare) && !getBit(enemyPieces, castleSquare));
+			//			}
+			//			for (int dangerSquare = 57; dangerSquare < 61; dangerSquare++)
+			//			{
+			//				queensideLegal = (queensideLegal && !getBit(dangerMap, dangerSquare));
+			//			}
+
+			//			if (queensideLegal)
+			//			{
+			//				vector<U64> newBoard = board;
+
+			//				popBit(newBoard[WHITEKING], startSquare);
+			//				setBit(newBoard[WHITEKING], 58);
+			//				popBit(newBoard[WHITEROOK], 56);
+			//				setBit(newBoard[WHITEROOK], 59);
+
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][startSquare];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEKING][58];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][56];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[WHITEROOK][59];
+
+			//				popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEKINGSIDE);
+			//				popBit(newBoard[BOARDEXTRA], LEGALCASTLEWHITEQUEENSIDE);
+			//				setBit(newBoard[BOARDEXTRA], LASTCASTLEWHITEQUEENSIDE);
+
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEKINGSIDE];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEWHITEQUEENSIDE];
+
+			//				setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
+			//				nextPositions[0].push_back(newBoard);
+			//			}
+			//		}
+
+			//		if (currentPiece == 'k' && startSquare == 4)
+			//		{
+			//			bool kingsideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
+			//			for (int castleSquare = 5; castleSquare < 7; castleSquare++)
+			//			{
+			//				kingsideLegal = (kingsideLegal && !getBit(allyPieces, castleSquare) && !getBit(enemyPieces, castleSquare));
+			//			}
+			//			for (int dangerSquare = 4; dangerSquare < 7; dangerSquare++)
+			//			{
+			//				kingsideLegal = (kingsideLegal && !getBit(dangerMap, dangerSquare));
+			//			}
+
+			//			if (kingsideLegal)
+			//			{
+			//				vector<U64> newBoard = board;
+
+			//				popBit(newBoard[BLACKKING], startSquare);
+			//				setBit(newBoard[BLACKKING], 6);
+			//				popBit(newBoard[BLACKROOK], 7);
+			//				setBit(newBoard[BLACKROOK], 5);
+
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][startSquare];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][6];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKROOK][7];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKROOK][5];
+
+			//				popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
+			//				popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
+			//				setBit(newBoard[BOARDEXTRA], LASTCASTLEBLACKKINGSIDE);
+
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKKINGSIDE];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKQUEENSIDE];
+
+			//				setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
+			//				nextPositions[0].push_back(newBoard);
+			//			}
+
+			//			bool queensideLegal = getBit(board[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
+			//			for (int castleSquare = 1; castleSquare < 4; castleSquare++)
+			//			{
+			//				queensideLegal = (queensideLegal && !getBit(allyPieces, castleSquare) && !getBit(enemyPieces, castleSquare));
+			//			}
+			//			for (int dangerSquare = 1; dangerSquare < 5; dangerSquare++)
+			//			{
+			//				queensideLegal = (queensideLegal && !getBit(dangerMap, dangerSquare));
+			//			}
+
+			//			if (queensideLegal)
+			//			{
+			//				vector<U64> newBoard = board;
+
+			//				popBit(newBoard[BLACKKING], startSquare);
+			//				setBit(newBoard[BLACKKING], 2);
+			//				popBit(newBoard[BLACKROOK], 0);
+			//				setBit(newBoard[BLACKROOK], 3);
+
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][startSquare];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKKING][2];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKROOK][0];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BLACKROOK][3];
+
+			//				popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKKINGSIDE);
+			//				popBit(newBoard[BOARDEXTRA], LEGALCASTLEBLACKQUEENSIDE);
+			//				setBit(newBoard[BOARDEXTRA], LASTCASTLEBLACKQUEENSIDE);
+
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKKINGSIDE];
+			//				newBoard[BOARDHASHVALUE] ^= zobristTable[BOARDEXTRA][LEGALCASTLEBLACKQUEENSIDE];
+
+			//				setBit(newBoard[BOARDEXTRA], LASTKINGMOVE);
+			//				nextPositions[0].push_back(newBoard);
+			//			}
+			//		}
+
+			//	}
+			//}
 
 			break;
 		}

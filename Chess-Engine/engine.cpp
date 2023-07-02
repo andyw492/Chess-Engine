@@ -150,10 +150,21 @@ vector<U64> Engine::findBestPosition(Parameters* p, Position currentPosition, Po
 		vector<U64> playerPosition = helper::positionToU64(currentPosition);
 
 		PRINT("last engine\n\n", 2);
-		//helper::printBoard(lastEnginePosition);
+		WaitForSingleObject(p->mutex, INFINITE);
+		if (p->debugPrint[2])
+		{
+			helper::printBoard(lastEnginePosition);
+		}
+		ReleaseMutex(p->mutex);
+		
 
 		PRINT("player\n\n", 2);
-		//helper::printBoard(playerPosition);
+		WaitForSingleObject(p->mutex, INFINITE);
+		if (p->debugPrint[2])
+		{
+			helper::printBoard(playerPosition);
+		}
+		ReleaseMutex(p->mutex);
 		PRINT("candidates\n\n", 2);
 
 		for (int i = 0; i < positionsFromLastEnginePosition.size(); i++)
@@ -189,7 +200,24 @@ vector<U64> Engine::findBestPosition(Parameters* p, Position currentPosition, Po
 		assert(startPosition.size() > 0);
 	}
 
-	
+	WaitForSingleObject(p->mutex, INFINITE);
+	if (p->debugPrint[0])
+	{
+		PRINT("----------------- ENGINE -----------------\n\n", 0);
+		helper::printBoard(startPosition);
+	}
+	ReleaseMutex(p->mutex);
+
+	vector<vector<U64>> nextPositions = helper::getNextPositions(startPosition, false, zobristTable);
+	WaitForSingleObject(p->mutex, INFINITE);
+	for (int i = 0; i < nextPositions.size(); i++)
+	{
+		if (p->debugPrint[0])
+		{
+			helper::printBoard(nextPositions[i]);
+		}		
+	}
+	ReleaseMutex(p->mutex);
 
 	root->position = startPosition;
 	root->min = true;
@@ -613,6 +641,7 @@ UINT Engine::start(LPVOID pParam)
 		WaitForSingleObject(p->mutex, INFINITE);
 		p->deleteSignal = false;
 		p->readyToDelete.clear();
+		p->startedClear = false;
 		ReleaseMutex(p->mutex);
 
 		Position currentPosition;
@@ -643,6 +672,11 @@ UINT Engine::start(LPVOID pParam)
 
 		while (true)
 		{
+			WaitForSingleObject(p->mutex, INFINITE);
+			windowClosed = p->windowClosed;
+			ReleaseMutex(p->mutex);
+			if (windowClosed) { break; }
+
 			WaitForSingleObject(p->mutex, INFINITE);
 			if (p->readyToDelete.size() == p->workerCount)
 			{

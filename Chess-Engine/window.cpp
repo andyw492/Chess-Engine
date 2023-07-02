@@ -122,7 +122,14 @@ void Window::printBoard(Parameters* p, Position currentPosition)
 	{
 		for (int j = 0; j < 8; j++)
 		{
-			PRINT(string() + currentPosition.board[i][j] + " ", 0);
+			if (currentPosition.board[i][j] != ' ')
+			{
+				PRINT(string() + currentPosition.board[i][j] + " ", 0);
+			}
+			else
+			{
+				PRINT(". ", 0);
+			}
 		}
 		PRINT("\n", 0);
 	}
@@ -736,10 +743,22 @@ void Window::display(LPVOID pParam)
 
 	std::chrono::steady_clock::time_point engineStart = std::chrono::high_resolution_clock::now();
 
+	// debug
+	bool printed = false;
+
 	// main window loop
 	while (window.isOpen())
 	{
 		updateWindow(p, window, statsText, font, engineStart, currentPosition);
+
+		WaitForSingleObject(p->mutex, INFINITE);
+		bool playerToMove = p->playerToMove;
+		ReleaseMutex(p->mutex);
+		if (playerToMove && !printed)
+		{
+			printBoard(p, currentPosition);
+			printed = true;
+		}
 
 		sf::Event event;
 		while (window.pollEvent(event))
@@ -794,6 +813,8 @@ void Window::display(LPVOID pParam)
 					ReleaseMutex(p->mutex);
 
 					engineStart = std::chrono::high_resolution_clock::now();
+
+					printed = false;
 				}
 			}
 		}

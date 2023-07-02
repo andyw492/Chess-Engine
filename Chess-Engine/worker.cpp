@@ -76,7 +76,6 @@ void Worker::evaluateNode(Parameters* p, PositionNode* node)
 		// put node->nextpositions in hash table
 		WaitForSingleObject(p->mutex, INFINITE);
 		p->nextPositionsCache[hashValue] = node->nextPositions;
-		p->positionsCache[hashValue] = node->position;
 		ReleaseMutex(p->mutex);
 	}
 	//else if(false)
@@ -303,13 +302,27 @@ UINT Worker::start(LPVOID pParam)
 		}
 		else
 		{
+			bool doClear = false;
 			WaitForSingleObject(p->mutex, INFINITE);
 			if (!p->toDelete.empty())
 			{
-				toDelete = p->toDelete.top();
-				p->toDelete.pop();
+				if (!p->startedClear)
+				{
+					p->startedClear = true;
+					doClear = true;
+				}
+				else
+				{
+					toDelete = p->toDelete.top();
+					p->toDelete.pop();
+				}
 			}
 			ReleaseMutex(p->mutex);
+
+			if (doClear)
+			{
+				p->nextPositionsCache.clear();
+			}
 
 			if (toDelete != nullptr)
 			{

@@ -190,16 +190,16 @@ int main(void)
 	fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 	// debug
-	if (0)
+	if (1)
 	{
-		fen = "r1bqkb1r/ppp2ppp/2np1n2/4p3/4P3/2NPB3/PPP2PPP/R2QKB1R w KQkq - 0 1";
+		fen = "r3k3/7R/8/8/8/8/8/7K w kq - - 0 1";
 	}
 	p.initialFen = fen;
 
 	// debug
 	vector<int> debugPrint
 	{
-		0
+		1
 		,0
 		,0
 		,0
@@ -207,7 +207,7 @@ int main(void)
 	};
 
 	/*
-		0 - window board pieces
+		0 - window board pieces, legal moves
 		1 - node creation/deletion
 		2 - bad moves
 	*/
